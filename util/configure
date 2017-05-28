@@ -135,6 +135,7 @@ my $user_luajit_xcflags;
 my $no_luajit_lua52;
 
 my (@ngx_opts, @ngx_cc_opts, @ngx_ld_opts);
+my @user_cc_opts;
 
 push @ngx_opts, "--with-stream";
 
@@ -152,7 +153,7 @@ for my $opt (@ARGV) {
 
     if ($opt =~ /^--with-cc=(.+)/) {
         $cc = $1;
-        push @ngx_opts, "$opt";
+        push @ngx_opts, $opt;
         next;
     }
 
@@ -278,6 +279,7 @@ for my $opt (@ARGV) {
         usage 0;
 
     } elsif ($opt =~ /^--with-cc-opt=(.*)/) {
+        push @user_cc_opts, $1;
         push @ngx_cc_opts, $1;
 
     } elsif ($opt =~ /^--with-ld-opt=(.*)/) {
@@ -1118,16 +1120,26 @@ _EOC_
                     $extra_opts .= " LDFLAGS=\"-shared -L$luajit_root -llua51\"";
                 }
 
+                my $extra_cflags = '';
+                if (@user_cc_opts) {
+                    $extra_cflags = ' ' . join ' ', @user_cc_opts;
+                }
+
                 if ($on_solaris) {
                     $extra_opts .= " INSTALL=$root_dir/build/install";
                     if ($opts->{debug}) {
-                        $extra_opts .= " CFLAGS=\"-g -O -Wall\"";
+                        $extra_opts .= " CFLAGS=\"-g -O -Wall$extra_cflags\"";
 
+                    } elsif ($extra_cflags) {
+                        $extra_opts .= " CFLAGS=\"-g -O3 -Wall$extra_cflags\"";
                     }
 
                 } else {
                     if ($opts->{debug}) {
-                        $extra_opts .= " CFLAGS=\"-g -O -Wall\"";
+                        $extra_opts .= " CFLAGS=\"-g -O -Wall$extra_cflags\"";
+
+                    } elsif ($extra_cflags) {
+                        $extra_opts .= " CFLAGS=\"-g -O3 -Wall$extra_cflags\"";
                     }
                 }
 
@@ -1135,6 +1147,10 @@ _EOC_
                     $extra_opts .= " CC='$cc'";
                 } else {
                     $extra_opts .= " CC=cc";
+                }
+
+                if ($platform eq 'macosx') {
+                    $extra_opts .= " LDFLAGS='-bundle -undefined dynamic_lookup'";
                 }
 
                 push @make_cmds, "cd $root_dir/build/$dir && ".
