@@ -702,6 +702,18 @@ cd ..
 
 #################################
 
+ver=0.1.1rc1
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-cookie/tarball/v$ver" -O "lua-resty-cookie-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-cookie-$ver.tar.gz || exit 1
+mv orinc-lua-resty-cookie-* lua-resty-cookie-$ver || exit 1
+cd lua-resty-cookie-$ver || exit 1
+#patch -p1 < $root/patches/lua_cjson-$ver-array_detection_fix.patch || exit 1
+sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
+mv mk Makefile || exit 1
+cd ..
+
+#################################
+
 ver=0.10
 $root/util/get-tarball "https://github.com/pintsized/lua-resty-http/tarball/v$ver" -O "lua-resty-http-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-http-$ver.tar.gz || exit 1
