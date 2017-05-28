@@ -679,6 +679,18 @@ cd ..
 #################################
 
 ver=0.01rc1
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-ipdatx/tarball/v$ver" -O "lua-resty-ipdatx-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-ipdatx-$ver.tar.gz || exit 1
+mv orinc-lua-resty-ipdatx-* lua-resty-ipdatx-$ver || exit 1
+cd lua-resty-ipdatx-$ver || exit 1
+#patch -p1 < $root/patches/lua_cjson-$ver-array_detection_fix.patch || exit 1
+sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
+mv mk Makefile || exit 1
+cd ..
+
+#################################
+
+ver=0.01rc1
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-ssl/tarball/v$ver" -O "lua-resty-ssl-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-ssl-$ver.tar.gz || exit 1
 mv orinc-lua-resty-ssl-* lua-resty-ssl-$ver || exit 1
