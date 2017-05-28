@@ -211,6 +211,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_shdict_simple') {
         $resty_opts{no_lua_resty_shdict_simple} = 1;
 
+    } elsif ($opt eq '--without-edge_message_bus') {
+        $resty_opts{no_edge_message_bus} = 1;
+
     } elsif ($opt eq '--without-lua_resty_ini') {
         $resty_opts{no_lua_resty_ini} = 1;
 
@@ -1127,6 +1130,20 @@ _EOC_
             }
         }
 
+        unless ($opts->{no_edge_message_bus}) {
+            my $name = "edge-message-bus";
+            my $dir = auto_complete $name;
+            if (!defined $dir) {
+                die "No $name found";
+            }
+
+            my $extra_opts = " DESTDIR=\$(DESTDIR) LUA_LIB_DIR=$lualib_prefix"
+                ." INSTALL=$root_dir/build/install";
+
+            push @make_install_cmds, "cd $root_dir/build/$dir && " .
+                "\$(MAKE) install$extra_opts";
+        }
+
         for my $key (qw(memcached-shdict shdict-simple ini upstream dns memcached redis mysql string upload websocket
                         lock lrucache core upstream_healthcheck limit_traffic))
         {
@@ -1286,6 +1303,7 @@ _EOC_
   --without-lua_resty_ini            disable the lua-resty-ini library
   --without-lua_resty_balancer       disable the lua-resty-balancer library
   --without-lua_resty_upstream       disable the lua-resty-upstream library
+  --without-edge_message_bus         disable the edge-message-bus Lua library
   --without-lua_resty_ssl            disable the lua-resty-ssl library
   --without-lua_resty_lmdb           disable the lua-resty-lmdb library
   --without-lua_resty_dns            disable the lua-resty-dns library
