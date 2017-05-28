@@ -1128,18 +1128,18 @@ _EOC_
                 if ($on_solaris) {
                     $extra_opts .= " INSTALL=$root_dir/build/install";
                     if ($opts->{debug}) {
-                        $extra_opts .= " CFLAGS=\"-g -O -Wall$extra_cflags\"";
+                        $extra_opts .= " CFLAGS=\"-fpic -g -O -Wall$extra_cflags\"";
 
                     } elsif ($extra_cflags) {
-                        $extra_opts .= " CFLAGS=\"-g -O3 -Wall$extra_cflags\"";
+                        $extra_opts .= " CFLAGS=\"-fpic -g -O3 -Wall$extra_cflags\"";
                     }
 
                 } else {
                     if ($opts->{debug}) {
-                        $extra_opts .= " CFLAGS=\"-g -O -Wall$extra_cflags\"";
+                        $extra_opts .= " CFLAGS=\"-fpic -g -O -Wall$extra_cflags\"";
 
                     } elsif ($extra_cflags) {
-                        $extra_opts .= " CFLAGS=\"-g -O3 -Wall$extra_cflags\"";
+                        $extra_opts .= " CFLAGS=\"-fpic -g -O3 -Wall$extra_cflags\"";
                     }
                 }
 
@@ -1149,7 +1149,7 @@ _EOC_
                     $extra_opts .= " CC=cc";
                 }
 
-                if ($platform eq 'macosx') {
+                if ($tag ne 'lmdb' && $platform eq 'macosx') {
                     $extra_opts .= " LDFLAGS='-bundle -undefined dynamic_lookup'";
                 }
 
