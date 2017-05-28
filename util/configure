@@ -205,6 +205,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_upstream') {
         $resty_opts{no_lua_resty_upstream} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_shdict_simple') {
+        $resty_opts{no_lua_resty_shdict_simple} = 1;
+
     } elsif ($opt eq '--without-lua_resty_ini') {
         $resty_opts{no_lua_resty_ini} = 1;
 
@@ -1121,7 +1124,7 @@ _EOC_
             }
         }
 
-        for my $key (qw(ini upstream dns memcached redis mysql string upload websocket
+        for my $key (qw(shdict-simple ini upstream dns memcached redis mysql string upload websocket
                         lock lrucache core upstream_healthcheck limit_traffic))
         {
             unless ($opts->{"no_lua_resty_$key"}) {
@@ -1274,6 +1277,7 @@ _EOC_
   --without-lua_cjson                disable the lua-cjson library
   --without-lua_redis_parser         disable the lua-redis-parser library
   --without-lua_rds_parser           disable the lua-rds-parser library
+  --without-lua_resty_shdict_simple  disable the lua-resty-shdict-simple library
   --without-lua_resty_ini            disable the lua-resty-ini library
   --without-lua_resty_balancer       disable the lua-resty-balancer library
   --without-lua_resty_upstream       disable the lua-resty-upstream library
