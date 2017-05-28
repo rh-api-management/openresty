@@ -223,6 +223,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_http') {
         $resty_opts{no_lua_resty_http} = 1;
 
+    } elsif ($opt eq '--without-pgmoon') {
+        $resty_opts{no_pgmoon} = 1;
+
     } elsif ($opt eq '--without-lua_resty_ini') {
         $resty_opts{no_lua_resty_ini} = 1;
 
@@ -1142,7 +1145,7 @@ _EOC_
             }
         }
 
-        for my $name (qw/edge-message-bus lua-tablepool/) {
+        for my $name (qw/edge-message-bus lua-tablepool pgmoon/) {
             (my $tag = $name) =~ s/-/_/g;
             unless ($opts->{"no_$tag"}) {
                 my $dir = auto_complete $name;
@@ -1317,6 +1320,7 @@ _EOC_
   --without-lua_tablepool            disable the lua-tablepool library
   --without-lua_resty_http           disable the lua-resty-http library
   --without-lua_resty_cookie         disable the lua-resty-cookie library
+  --without-pgmoon                   disable the pgmoon library
   --without-lua_resty_ini            disable the lua-resty-ini library
   --without-lua_resty_balancer       disable the lua-resty-balancer library
   --without-lua_resty_upstream       disable the lua-resty-upstream library
