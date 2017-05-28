@@ -89,6 +89,8 @@ my @modules = (
     #[http_auth_request => 'auth-request-nginx-module'],
     [http_rds_json => 'rds-json-nginx-module'],
     [http_rds_csv => 'rds-csv-nginx-module'],
+    [stream_lua => 'ngx_stream_lua'],
+    [http_lua_ssl => 'ngx_lua_ssl'],
 );
 
 my $without_resty_mods_regex;
@@ -121,7 +123,7 @@ my $with_resty_mods_regex;
     $with_resty_mods_regex = qr/$s/;
 }
 
-my $prefix = '/usr/local/openresty';
+my $prefix = '/usr/local/openresty-plus';
 my $ngx_sbin;
 my %resty_opts;
 my $dry_run;
@@ -133,6 +135,8 @@ my $user_luajit_xcflags;
 my $no_luajit_lua52;
 
 my (@ngx_opts, @ngx_cc_opts, @ngx_ld_opts);
+
+push @ngx_opts, "--with-stream";
 
 # use -O2 to compile everything by default (which can be overridden
 # by the user's own --with-cc-opt=OPTS option):
@@ -364,7 +368,7 @@ if ($platform ne 'msys') {
     if (!$ngx_sbin) {
         $ngx_sbin = "$ngx_prefix/sbin/nginx";
     }
-    push @make_install_cmds, "ln -sf $ngx_sbin \$(DESTDIR)$prefix/bin/openresty";
+    push @make_install_cmds, "ln -sf $ngx_sbin \$(DESTDIR)$prefix/bin/openresty-plus";
 }
 
 cd '../..'; # to the root
@@ -578,6 +582,49 @@ _END_
         env LIBPQ_LIB => $pg_lib;
         env LIBPQ_INC => $pg_inc;
         push @ngx_rpaths, $pg_lib;
+    }
+
+    {
+        my $maxmind_src = auto_complete 'libmaxminddb';
+        my $maxmind_prefix = File::Spec->catfile($prefix, "libmaxminddb");
+        my $maxmind_root = File::Spec->rel2abs("maxminddb-root");
+
+        if (-d $maxmind_root) {
+            shell "rm -rf $maxmind_root";
+        }
+
+        mkdir $maxmind_root or
+            die "create create directory maxminddb-root: $!\n";
+
+        cd $maxmind_src;
+
+        shell "./configure --prefix=$maxmind_prefix --disable-tests";
+
+        if (defined $cores) {
+            shell "${make} -j$cores", $dry_run;
+        } else {
+            shell "${make}", $dry_run;
+        }
+
+        shell "${make} install PREFIX=$maxmind_prefix DESTDIR=$maxmind_root/", $dry_run;
+
+        my $lib = File::Spec->catfile($maxmind_root, $maxmind_prefix, "lib");
+        my $inc = File::Spec->catfile($maxmind_root, $maxmind_prefix, "include");
+
+        unshift @ngx_cc_opts, "-I$inc";
+        unshift @ngx_ld_opts, "-L$lib";
+
+        push @make_cmds, "cd $root_dir/build/$maxmind_src && "
+            . "\$(MAKE) PREFIX=$maxmind_prefix";
+
+        my $abs_maxmind_src = File::Spec->rel2abs(File::Spec->catfile($root_dir, "build", $maxmind_src), $root_dir);
+
+        push @make_install_cmds, "cd $abs_maxmind_src && "
+            . "\$(MAKE) install PREFIX=$maxmind_prefix DESTDIR=\$(DESTDIR)";
+
+        push @ngx_rpaths, File::Spec->catfile($maxmind_prefix, "lib");
+
+        cd '..';
     }
 
     if ($opts->{luajit_path}) {
@@ -1094,7 +1141,7 @@ sub usage ($) {
     my $msg = <<'_EOC_';
   --help                             this message
 
-  --prefix=PATH                      set the installation prefix (default to /usr/local/openresty)
+  --prefix=PATH                      set the installation prefix (default to /usr/local/openresty-plus)
 
   --with-debug                       enable debug logging
   --with-dtrace-probes               enable dtrace USDT probes

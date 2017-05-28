@@ -9,7 +9,7 @@ echo -n "openresty "
 . ./util/ver
 echo
 
-name=openresty-$version
+name=openresty-plus-$version
 work=$root/work
 
 if [ -z $debug ]; then
@@ -446,6 +446,26 @@ ver=0.07rc1
 $root/util/get-tarball "https://github.com/openresty/lua-upstream-nginx-module/tarball/v$ver" -O lua-upstream-nginx-module-$ver.tar.gz || exit 1
 tar -xzf lua-upstream-nginx-module-$ver.tar.gz || exit 1
 mv openresty-lua-upstream-nginx-module-* ngx_lua_upstream-$ver || exit 1
+
+#################################
+
+ver=0.0.2rc2
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/stream-lua-nginx-module/tarball/v$ver" -O stream-lua-nginx-module-$ver.tar.gz || exit 1
+tar -xzf stream-lua-nginx-module-$ver.tar.gz || exit 1
+mv orinc-stream-lua-nginx-module-* ngx_stream_lua-$ver || exit 1
+
+#################################
+
+ver=0.01rc1
+$root/util/get-tarball "https://github.com/openresty/lua-ssl-nginx-module/tarball/v$ver" -O lua-ssl-nginx-module-$ver.tar.gz || exit 1
+tar -xzf lua-ssl-nginx-module-$ver.tar.gz || exit 1
+mv openresty-lua-ssl-nginx-module-* ngx_lua_ssl-$ver || exit 1
+
+#################################
+
+ver=1.2.1
+$root/util/get-tarball "https://github.com/maxmind/libmaxminddb/releases/download/$ver/libmaxminddb-$ver.tar.gz" -O libmaxminddb-$ver.tar.gz || exit 1
+tar -xzvf libmaxminddb-$ver.tar.gz || exit 1
 
 #################################
 
