@@ -456,7 +456,7 @@ mv orinc-stream-lua-nginx-module-* ngx_stream_lua-$ver || exit 1
 
 #################################
 
-ver=0.01rc1
+ver=0.01rc2
 $root/util/get-tarball "https://github.com/openresty/lua-ssl-nginx-module/tarball/v$ver" -O lua-ssl-nginx-module-$ver.tar.gz || exit 1
 tar -xzf lua-ssl-nginx-module-$ver.tar.gz || exit 1
 mv openresty-lua-ssl-nginx-module-* ngx_lua_ssl-$ver || exit 1

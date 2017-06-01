@@ -1195,6 +1195,20 @@ _EOC_
                     "\$(MAKE) install$extra_opts";
             }
         }
+
+        unless ($opts->{"no_http_lua_ssl"}) {
+            my $name = "ngx_lua_ssl";
+            my $dir = auto_complete $name;
+            if (!defined $dir) {
+                die "No $name found";
+            }
+
+            my $extra_opts = " DESTDIR=\$(DESTDIR) LUA_LIB_DIR=$lualib_prefix"
+                ." INSTALL=$root_dir/build/install";
+
+            push @make_install_cmds, "cd $root_dir/build/$dir && " .
+                "\$(MAKE) install$extra_opts";
+        }
     }
 
     # configure opm:
