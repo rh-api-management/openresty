@@ -702,6 +702,17 @@ cd ..
 
 #################################
 
+ver=0.01rc1
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/edge-pki/tarball/v$ver" -O "edge-pki-$ver.tar.gz" || exit 1
+tar -xzf edge-pki-$ver.tar.gz || exit 1
+mv orinc-edge-pki-* edge-pki-$ver || exit 1
+cd edge-pki-$ver || exit 1
+#sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
+#mv mk Makefile || exit 1
+cd ..
+
+#################################
+
 ver=1.8.1rc2
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/pgmoon/tarball/v$ver" -O "pgmoon-$ver.tar.gz" || exit 1
 tar -xzf pgmoon-$ver.tar.gz || exit 1
