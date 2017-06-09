@@ -32,9 +32,11 @@ The homepage for this project is on [openresty.org](https://openresty.org/).
 For Users
 ---------
 
-Visit the [download page](https://openresty.org/en/download.html) on the `openresty.org` web site
-to download the latest bundle tarball, and
-follow the installation instructions in the [installation page](https://openresty.org/en/installation.html).
+Visit the [openresty plus download page](https://github.com/orinc/openresty-plus/releases) on the GitHub web site
+with the right login details
+to download the latest bundle tarball (like `openresty-plus-1.11.2.3.2.tar.gz`), and
+follow the same installation instructions as in the [installation page](https://openresty.org/en/installation.html)
+for the open source openresty source tarball.
 
 For Bundle Maintainers
 ----------------------
