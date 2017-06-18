@@ -14,7 +14,7 @@ cachefile=$work/$outfile
 if [ -s $cachefile ]; then
     cp $work/$outfile $outfile || exit 1
 else
-    wget --header="Authorization: token 6a294e415ac9a69d0edee81a4ffbfb0188c9cc53" $1 -O $3 || exit 1
+    wget --header="Authorization: token f084157e966db13b2fece83d350e5cf42898ae43" $1 -O $3 || exit 1
     if [ $? == 0 ]; then
         cp $3 $work/ || exit 1
     fi
