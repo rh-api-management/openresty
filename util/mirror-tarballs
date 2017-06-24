@@ -713,7 +713,7 @@ cd ..
 
 #################################
 
-ver=0.01rc2
+ver=0.01rc3
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-memcached-server/tarball/v$ver" -O "lua-resty-memcached-server-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-memcached-server-$ver.tar.gz || exit 1
 mv orinc-lua-resty-memcached-server-* lua-resty-memcached-server-$ver || exit 1
