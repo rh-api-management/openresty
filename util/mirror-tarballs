@@ -716,7 +716,7 @@ cd ..
 
 #################################
 
-ver=0.01rc1
+ver=0.01rc2
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/edge-pki/tarball/v$ver" -O "edge-pki-$ver.tar.gz" || exit 1
 tar -xzf edge-pki-$ver.tar.gz || exit 1
 mv orinc-edge-pki-* edge-pki-$ver || exit 1
