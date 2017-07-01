@@ -1021,17 +1021,17 @@ else
     hg clone http://hg.nginx.org/nginx.org || exit 1
 fi
 cd nginx.org/ || exit 1
-$nginx_xml2pod xml/en/docs || exit 1
+#$nginx_xml2pod xml/en/docs || exit 1
 cd $curdir || exit 1
 
 echo "restydoc-index $root/work/nginx.org"
-$restydoc_index --outdir bundle $root/work/nginx.org || exit 1
+#$restydoc_index --outdir bundle $root/work/nginx.org || exit 1
 
 echo "restydoc-index $root/doc/lua-5.1.5"
-$restydoc_index --outdir bundle $root/doc/lua-5.1.5 || exit 1
+#$restydoc_index --outdir bundle $root/doc/lua-5.1.5 || exit 1
 
 echo "restydoc-index $root/doc/LuaJIT-2.1"
-$restydoc_index --outdir bundle $root/doc/LuaJIT-2.1 || exit 1
+#$restydoc_index --outdir bundle $root/doc/LuaJIT-2.1 || exit 1
 
 # generate restydoc index from openresty docs
 
@@ -1043,7 +1043,7 @@ for indir in bundle/*/; do
         continue
     fi
     echo "restydoc-index --outdir bundle $indir"
-    $restydoc_index --outdir $curdir/bundle $indir || exit 1
+    #$restydoc_index --outdir $curdir/bundle $indir || exit 1
 done
 
 cd $curdir || exit 1
