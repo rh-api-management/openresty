@@ -630,6 +630,8 @@ _END_
         push @ngx_rpaths, $pg_lib;
     }
 
+=begin comment
+
     {
         my $maxmind_src = auto_complete 'libmaxminddb';
         my $maxmind_prefix = File::Spec->catfile($prefix, "libmaxminddb");
@@ -672,6 +674,10 @@ _END_
 
         cd '..';
     }
+
+=end comment
+
+=cut
 
     if ($opts->{luajit_path}) {
         my $luajit_prefix = $opts->{luajit_path};
