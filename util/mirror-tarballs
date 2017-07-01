@@ -57,6 +57,13 @@ fi
 
 answer=`$root/util/ver-ge "$main_ver" 1.11.2`
 if [ "$answer" = "Y" ]; then
+    echo "$info_txt applying the balancer_status_code patch"
+    patch -p1 < $root/patches/nginx-$main_ver-balancer_status_code.patch || exit 1
+    echo
+fi
+
+answer=`$root/util/ver-ge "$main_ver" 1.11.2`
+if [ "$answer" = "Y" ]; then
     echo "$info_txt applying the builtin_error_page_footer patch"
     patch -p1 < $root/patches/nginx-$main_ver-builtin_error_page_footer.patch || exit 1
     echo
@@ -442,7 +449,7 @@ mv openresty-drizzle-nginx-module-* drizzle-nginx-module-$ver || exit 1
 
 #################################
 
-ver=0.10.9rc6
+ver=0.10.9rc7
 $root/util/get-tarball "https://github.com/openresty/lua-nginx-module/tarball/v$ver" -O lua-nginx-module-$ver.tar.gz || exit 1
 tar -xzf lua-nginx-module-$ver.tar.gz || exit 1
 mv openresty-lua-nginx-module-* ngx_lua-$ver || exit 1
@@ -956,7 +963,7 @@ cd ..
 
 #################################
 
-ver=0.1.12rc6
+ver=0.1.12rc7
 $root/util/get-tarball "https://github.com/openresty/lua-resty-core/tarball/v$ver" -O "lua-resty-core-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-core-$ver.tar.gz || exit 1
 mv openresty-lua-resty-core-* lua-resty-core-$ver || exit 1
