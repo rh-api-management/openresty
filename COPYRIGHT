@@ -1,3 +1,15 @@
+For the commercial code in this openresty-plus software:
+
+Copyright (C) 2017, by OpenResty Inc.
+
+All rights reserved.
+
+This is propriatery software and any redistribution of the commercial portion
+of the code in this package is explicitly prohibited. Use of this software
+needs written agreement from OpenResty Inc.
+
+-----------------------------------------------------------------------------
+
 lua-nginx-module and other core OpenResty components
 
 Copyright (C) 2009-2015, by Yichun "agentzh" Zhang, OpenResty Inc.
