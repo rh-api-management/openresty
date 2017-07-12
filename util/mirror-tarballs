@@ -633,13 +633,13 @@ mv openresty-opm-* opm-$ver || exit 1
 
 #################################
 
-ver=2.1-20170517
-$root/util/get-tarball "https://github.com/openresty/luajit2/archive/v$ver.tar.gz" -O "LuaJIT-$ver.tar.gz" || exit 1
-tar -xzf LuaJIT-$ver.tar.gz || exit 1
-mv luajit2-* LuaJIT-$ver || exit 1
+ver=2.1-20170711
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/luajit2-plus/tarball/plus-v$ver" -O "LuaJIT-plus-$ver.tar.gz" || exit 1
+tar -xzf LuaJIT-plus-$ver.tar.gz || exit 1
+mv orinc-luajit2-plus-* LuaJIT-plus-$ver || exit 1
 
 #$root/util/get-tarball http://luajit.org/download/v2.0.1_hotfix1.patch -O hotfix.patch
-cd LuaJIT-$ver || exit 1;
+cd LuaJIT-plus-$ver || exit 1;
 echo "$info_txt applying the luajit-win32-default-paths patch for luajit $ver"
 patch -p1 < $root/patches/luajit-win32-default-paths.patch || exit 1
 #rm ../hotfix.patch

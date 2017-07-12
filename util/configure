@@ -130,7 +130,7 @@ my $dry_run;
 my @ngx_rpaths;
 my $cc;
 my $cores;
-my $luajit_xcflags = '';
+my $luajit_xcflags = '-DLUAJIT_OBFUSCATE';
 my $user_luajit_xcflags;
 my $no_luajit_lua52;
 
@@ -703,7 +703,7 @@ _END_
         push @ngx_rpaths, "$luajit_prefix/lib";
 
     } elsif ($opts->{luajit}) {
-        my $luajit_src = auto_complete 'LuaJIT';
+        my $luajit_src = auto_complete 'LuaJIT-plus';
         my $luajit_prefix = File::Spec->catfile($prefix, "luajit");
         my $luajit_root = File::Spec->rel2abs("luajit-root");
 
