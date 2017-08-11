@@ -400,7 +400,7 @@ rm -rf no-pool-nginx-$ver
 
 #################################
 
-ver=0.60
+ver=0.61
 $root/util/get-tarball "https://github.com/openresty/echo-nginx-module/tarball/v$ver" -O echo-nginx-module-$ver.tar.gz || exit 1
 tar -xzf echo-nginx-module-$ver.tar.gz || exit 1
 mv openresty-echo-nginx-module-* echo-nginx-module-$ver || exit 1
@@ -456,14 +456,14 @@ mv openresty-drizzle-nginx-module-* drizzle-nginx-module-$ver || exit 1
 
 #################################
 
-ver=0.10.9rc9
+ver=0.10.10
 $root/util/get-tarball "https://github.com/openresty/lua-nginx-module/tarball/v$ver" -O lua-nginx-module-$ver.tar.gz || exit 1
 tar -xzf lua-nginx-module-$ver.tar.gz || exit 1
 mv openresty-lua-nginx-module-* ngx_lua-$ver || exit 1
 
 #################################
 
-ver=0.07rc1
+ver=0.07
 $root/util/get-tarball "https://github.com/openresty/lua-upstream-nginx-module/tarball/v$ver" -O lua-upstream-nginx-module-$ver.tar.gz || exit 1
 tar -xzf lua-upstream-nginx-module-$ver.tar.gz || exit 1
 mv openresty-lua-upstream-nginx-module-* ngx_lua_upstream-$ver || exit 1
@@ -587,10 +587,10 @@ cd ..
 
 #################################
 
-ver=1.0rc7
-$root/util/get-tarball "https://github.com/FRiCKLE/ngx_postgres/tarball/$ver" -O ngx_postgres-$ver.tar.gz || exit 1
+ver=1.0
+$root/util/get-tarball "https://github.com/openresty/ngx_postgres/tarball/$ver" -O ngx_postgres-$ver.tar.gz || exit 1
 tar -xzf ngx_postgres-$ver.tar.gz || exit 1
-mv FRiCKLE-ngx_postgres-* ngx_postgres-$ver || exit 1
+mv openresty-ngx_postgres-* ngx_postgres-$ver || exit 1
 
 #################################
 
@@ -608,7 +608,7 @@ mv openresty-redis2-nginx-module-* redis2-nginx-module-$ver || exit 1
 
 #################################
 
-ver=0.18rc6
+ver=0.19
 $root/util/get-tarball "https://github.com/openresty/resty-cli/tarball/v$ver" -O resty-cli-$ver.tar.gz || exit 1
 tar -xzf resty-cli-$ver.tar.gz || exit 1
 mv openresty-resty-cli-* resty-cli-$ver || exit 1
@@ -880,7 +880,7 @@ cd ..
 
 #################################
 
-ver=0.19rc1
+ver=0.19
 $root/util/get-tarball "https://github.com/openresty/lua-resty-dns/tarball/v$ver" -O "lua-resty-dns-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-dns-$ver.tar.gz || exit 1
 mv openresty-lua-resty-dns-* lua-resty-dns-$ver || exit 1
@@ -916,7 +916,7 @@ mv openresty-lua-resty-redis-* lua-resty-redis-$ver || exit 1
 
 #################################
 
-ver=0.20rc1
+ver=0.20
 $root/util/get-tarball "https://github.com/openresty/lua-resty-mysql/tarball/v$ver" -O "lua-resty-mysql-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-mysql-$ver.tar.gz || exit 1
 mv openresty-lua-resty-mysql-* lua-resty-mysql-$ver || exit 1
@@ -928,7 +928,7 @@ cd ..
 
 #################################
 
-ver=0.04rc1
+ver=0.04
 $root/util/get-tarball "https://github.com/openresty/lua-resty-limit-traffic/tarball/v$ver" -O "lua-resty-limit-traffic-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-limit-traffic-$ver.tar.gz || exit 1
 mv openresty-lua-resty-limit-traffic-* lua-resty-limit-traffic-$ver || exit 1
@@ -952,7 +952,7 @@ cd ..
 
 #################################
 
-ver=0.10rc1
+ver=0.10
 $root/util/get-tarball "https://github.com/openresty/lua-resty-string/tarball/v$ver" -O "lua-resty-string-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-string-$ver.tar.gz || exit 1
 mv openresty-lua-resty-string-* lua-resty-string-$ver || exit 1
@@ -976,7 +976,7 @@ cd ..
 
 #################################
 
-ver=0.07rc1
+ver=0.07
 $root/util/get-tarball "https://github.com/openresty/lua-resty-lock/tarball/v$ver" -O "lua-resty-lock-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-lock-$ver.tar.gz || exit 1
 mv openresty-lua-resty-lock-* lua-resty-lock-$ver || exit 1
@@ -988,7 +988,7 @@ cd ..
 
 #################################
 
-ver=0.06
+ver=0.07
 $root/util/get-tarball "https://github.com/openresty/lua-resty-lrucache/tarball/v$ver" -O "lua-resty-lrucache-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-lrucache-$ver.tar.gz || exit 1
 mv openresty-lua-resty-lrucache-* lua-resty-lrucache-$ver || exit 1
@@ -1000,7 +1000,7 @@ cd ..
 
 #################################
 
-ver=0.1.12rc8
+ver=0.1.12
 $root/util/get-tarball "https://github.com/openresty/lua-resty-core/tarball/v$ver" -O "lua-resty-core-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-core-$ver.tar.gz || exit 1
 mv openresty-lua-resty-core-* lua-resty-core-$ver || exit 1
@@ -1012,7 +1012,7 @@ mv openresty-lua-resty-core-* lua-resty-core-$ver || exit 1
 
 #################################
 
-ver=0.04
+ver=0.05
 $root/util/get-tarball "https://github.com/openresty/lua-resty-upstream-healthcheck/tarball/v$ver" -O "lua-resty-upstream-healthcheck-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-upstream-healthcheck-$ver.tar.gz || exit 1
 mv openresty-lua-resty-upstream-healthcheck-* lua-resty-upstream-healthcheck-$ver || exit 1
