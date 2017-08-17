@@ -1029,6 +1029,28 @@ cd ..
 
 #################################
 
+ver=0.01rc4
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-gd/tarball/v$ver" -O "lua-gd-$ver.tar.gz" || exit 1
+tar -xzf lua-gd-$ver.tar.gz || exit 1
+mv orinc-lua-gd-* lua-gd-$ver || exit 1
+cd lua-gd-$ver || exit 1
+sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
+mv mk Makefile || exit 1
+cd ..
+
+#################################
+
+ver=0.01rc2
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-captcha/tarball/v$ver" -O "lua-captcha-$ver.tar.gz" || exit 1
+tar -xzf lua-captcha-$ver.tar.gz || exit 1
+mv orinc-lua-captcha-* lua-captcha-$ver || exit 1
+cd lua-captcha-$ver || exit 1
+sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
+mv mk Makefile || exit 1
+cd ..
+
+#################################
+
 rm *.tar.gz
 
 cd ..

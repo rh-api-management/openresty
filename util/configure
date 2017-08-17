@@ -282,6 +282,12 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_upstream_healthcheck') {
         $resty_opts{no_lua_resty_upstream_healthcheck} = 1;
 
+    } elsif ($opt eq '--without-lua_gd') {
+        $resty_opts{no_lua_gd} = 1;
+
+    } elsif ($opt eq '--without-lua_captcha') {
+        $resty_opts{no_lua_captcha} = 1;
+
     } elsif ($opt eq '--without-lua_rds_parser') {
         $resty_opts{no_lua_rds_parser} = 1;
 
@@ -1015,6 +1021,63 @@ _EOC_
                 "\$(MAKE) install$extra_opts";
         }
 
+        unless ($opts->{no_lua_gd}) {
+            my $dir = auto_complete 'lua-gd';
+            if (!defined $dir) {
+                die "No lua-gd found";
+            }
+
+            my $lua_inc;
+            if ($opts->{luajit} || $opts->{luajit_path}) {
+                $lua_inc = $ENV{LUAJIT_INC};
+
+            } else {
+                $lua_inc = $ENV{LUA_INC};
+            }
+
+            my $extra_opts = " DESTDIR=\$(DESTDIR) LUA_INCLUDE_DIR=$lua_inc " .
+                "LUA_CMODULE_DIR=$lualib_prefix LUA_MODULE_DIR=$lualib_prefix";
+
+            if ($platform eq 'msys') {
+                my $luajit_root = File::Spec->rel2abs("luajit-root");
+                $extra_opts .= " LDFLAGS=\"-shared -L$luajit_root -llua51\"";
+            }
+
+            if ($on_solaris) {
+                $extra_opts .= " INSTALL=$root_dir/build/install";
+                if ($opts->{debug}) {
+                    $extra_opts .= " CFLAGS=\"-fpic -g -O -Wall\"";
+
+                } else {
+                    $extra_opts .= " CFLAGS=\"-fpic -g -O3 -Wall\"";
+                }
+
+            } else {
+                if ($opts->{debug}) {
+                    $extra_opts .= " CFLAGS=\"-fpic -g -O -Wall\"";
+
+                } else {
+                    $extra_opts .= " CFLAGS=\"-fpic -g -O3 -Wall\"";
+                }
+            }
+
+            if ($platform eq 'macosx') {
+                $extra_opts .= " LDFLAGS='-bundle -undefined dynamic_lookup'";
+            }
+
+            if (defined $cc) {
+                $extra_opts .= " CC='$cc'";
+            } else {
+                $extra_opts .= " CC=cc";
+            }
+
+            push @make_cmds, "cd $root_dir/build/$dir && ".
+                "\$(MAKE)$extra_opts";
+
+            push @make_install_cmds, "cd $root_dir/build/$dir && " .
+                "\$(MAKE) install$extra_opts";
+        }
+
         unless ($opts->{no_lua_redis_parser}) {
             my $dir = auto_complete 'lua-redis-parser';
             if (!defined $dir) {
@@ -1189,7 +1252,7 @@ _EOC_
             }
         }
 
-        for my $name (qw/edge-message-bus lua-tablepool pgmoon lua-conf-nginx-module/) {
+        for my $name (qw/edge-message-bus lua-tablepool pgmoon lua-conf-nginx-module lua-captcha/) {
             (my $tag = $name) =~ s/-/_/g;
             unless ($opts->{"no_$tag"}) {
                 my $dir = auto_complete $name;
@@ -1404,6 +1467,8 @@ _EOC_
   --without-lua_resty_lock           disable the lua-resty-lock library
   --without-lua_resty_lrucache       disable the lua-resty-lrucache library
   --without-lua_resty_core           disable the lua-resty-core library
+  --without-lua_gd                   disable the lua-gd library
+  --without-lua_captcha              disable the lua-captcha library
 
   --with-luajit                      enable and build the bundled LuaJIT 2.1 (the default)
   --with-luajit=DIR                  use the external LuaJIT 2.1 installation specified by DIR
