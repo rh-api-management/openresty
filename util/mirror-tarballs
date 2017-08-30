@@ -495,9 +495,11 @@ cd nginx-$main_ver || exit 1
 
 echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_conf_limit_rate_after.patch"
 patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_conf_limit_rate_after.patch || exit 1
+echo
 
 echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_proxy_next_upstream.patch"
 patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_proxy_next_upstream.patch || exit 1
+echo
 
 cd .. || exit 1
 
