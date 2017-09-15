@@ -267,6 +267,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_limit_traffic') {
         $resty_opts{no_lua_resty_limit_traffic} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_jit_uuid') {
+        $resty_opts{no_lua_resty_jit_uuid} = 1;
+
     } elsif ($opt eq '--without-lua_resty_websocket') {
         $resty_opts{no_lua_resty_websocket} = 1;
 
@@ -1269,7 +1272,7 @@ _EOC_
         }
 
         for my $key (qw(cookie http ipdatx memcached-shdict shdict-simple ini upstream dns memcached redis mysql string upload websocket
-                        lock lrucache core upstream_healthcheck limit_traffic memcached_server))
+                        lock lrucache core upstream_healthcheck limit_traffic memcached_server jit_uuid))
         {
             unless ($opts->{"no_lua_resty_$key"}) {
                 (my $key2 = $key) =~ s/_/-/g;
@@ -1464,6 +1467,7 @@ _EOC_
   --without-lua_resty_string         disable the lua-resty-string library
   --without-lua_resty_websocket      disable the lua-resty-websocket library
   --without-lua_resty_limit_traffic  disable the lua-resty-limit-traffic library
+  --without-lua-resty-jit-uuid       disable the lua-resty-jit-uuid library
   --without-lua_resty_lock           disable the lua-resty-lock library
   --without-lua_resty_lrucache       disable the lua-resty-lrucache library
   --without-lua_resty_core           disable the lua-resty-core library

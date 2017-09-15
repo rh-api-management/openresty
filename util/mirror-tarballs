@@ -1051,6 +1051,17 @@ cd ..
 
 #################################
 
+ver=0.01rc1
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-jit-uuid/tarball/v$ver" -O "lua-resty-jit-uuid-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-jit-uuid-$ver.tar.gz || exit 1
+mv orinc-lua-resty-jit-uuid-* lua-resty-jit-uuid-$ver || exit 1
+cd lua-resty-jit-uuid-$ver || exit 1
+sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
+mv mk Makefile || exit 1
+cd ..
+
+#################################
+
 rm *.tar.gz
 
 cd ..
