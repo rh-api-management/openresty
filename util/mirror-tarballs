@@ -1059,7 +1059,7 @@ cd ..
 
 #################################
 
-ver=0.01rc3
+ver=0.01rc4
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-captcha/tarball/v$ver" -O "lua-captcha-$ver.tar.gz" || exit 1
 tar -xzf lua-captcha-$ver.tar.gz || exit 1
 mv orinc-lua-captcha-* lua-captcha-$ver || exit 1
