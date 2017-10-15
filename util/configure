@@ -237,6 +237,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_ssl') {
         $resty_opts{no_lua_resty_ssl} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_pgutils') {
+        $resty_opts{no_lua_resty_pgutils} = 1;
+
     } elsif ($opt eq '--without-lua_resty_zlib') {
         $resty_opts{no_lua_resty_zlib} = 1;
 
@@ -1184,7 +1187,7 @@ _EOC_
                 "\$(MAKE) install$extra_opts";
         }
 
-        for my $tag (qw/lmdb balancer ssl zlib scrypt edge-pki/) {
+        for my $tag (qw/lmdb balancer ssl zlib scrypt edge-pki pgutils/) {
             my $no_flag = "no_lua_resty_$tag";
             my $pkg_prefix = "lua-resty-$tag";
             if ($tag eq 'edge-pki') {
@@ -1451,6 +1454,7 @@ _EOC_
   --without-edge_message_bus         disable the edge-message-bus Lua library
   --without-edge_pki                 disable the edge-pki Lua library
   --without-lua_resty_ssl            disable the lua-resty-ssl library
+  --without-lua_resty_pgutils        disable the lua-resty-pgutils library
   --without-lua_resty_zlib           disable the lua-resty-zlib library
   --without-lua_resty_scrypt         disable the lua-resty-scrypt library
   --without-lua_resty_lmdb           disable the lua-resty-lmdb library

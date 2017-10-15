@@ -777,14 +777,17 @@ cd ..
 
 #################################
 
+ver=0.01rc3
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-pgutils/tarball/v$ver" -O "lua-resty-pgutils-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-pgutils-$ver.tar.gz || exit 1
+mv orinc-lua-resty-pgutils-* lua-resty-pgutils-$ver || exit 1
+
+#################################
+
 ver=0.01rc7
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/edge-pki/tarball/v$ver" -O "edge-pki-$ver.tar.gz" || exit 1
 tar -xzf edge-pki-$ver.tar.gz || exit 1
 mv orinc-edge-pki-* edge-pki-$ver || exit 1
-cd edge-pki-$ver || exit 1
-#sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
-#mv mk Makefile || exit 1
-cd ..
 
 #################################
 
