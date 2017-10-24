@@ -4,7 +4,7 @@ main_ver=1.13.5
 minor_ver=1rc0
 
 # plus version:
-main_ver=1.11.2
+main_ver=1.13.5
 minor_ver=5.11
 
 version=$main_ver.$minor_ver
