@@ -240,6 +240,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_pgutils') {
         $resty_opts{no_lua_resty_pgutils} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_errlog_dedup') {
+        $resty_opts{no_lua_resty_errlog_dedup} = 1;
+
     } elsif ($opt eq '--without-lua_resty_zlib') {
         $resty_opts{no_lua_resty_zlib} = 1;
 
@@ -1282,7 +1285,7 @@ _EOC_
         }
 
         for my $key (qw(cookie http ipdatx memcached-shdict shdict-simple ini upstream dns memcached redis mysql string upload websocket
-                        lock lrucache core upstream_healthcheck limit_traffic memcached_server jit_uuid))
+                        lock lrucache core upstream_healthcheck limit_traffic memcached_server jit_uuid errlog_dedup))
         {
             unless ($opts->{"no_lua_resty_$key"}) {
                 (my $key2 = $key) =~ s/_/-/g;
@@ -1462,6 +1465,7 @@ _EOC_
   --without-edge_pki                 disable the edge-pki Lua library
   --without-lua_resty_ssl            disable the lua-resty-ssl library
   --without-lua_resty_pgutils        disable the lua-resty-pgutils library
+  --without-lua_resty_errlog_dedup   disable the lua-resty-errlog-dedup library
   --without-lua_resty_zlib           disable the lua-resty-zlib library
   --without-lua_resty_scrypt         disable the lua-resty-scrypt library
   --without-lua_resty_lmdb           disable the lua-resty-lmdb library
