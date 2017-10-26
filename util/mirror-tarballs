@@ -499,7 +499,7 @@ mv orinc-lua-resty-zlib-* lua-resty-zlib-$ver || exit 1
 
 #################################
 
-ver=0.01rc7
+ver=0.01rc8
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-conf-nginx-module/tarball/v$ver" -O lua-conf-nginx-module-$ver.tar.gz || exit 1
 tar -xzf lua-conf-nginx-module-$ver.tar.gz || exit 1
 mv orinc-lua-conf-nginx-module-* lua-conf-nginx-module-$ver || exit 1
