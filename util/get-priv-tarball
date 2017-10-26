@@ -2,7 +2,7 @@
 
 #root=$(readlink -f -- "$(dirname -- "$0")/..")
 root=`perl -MCwd -e'print Cwd::abs_path(shift)' $(dirname -- "$0")/..`
-work=$root/work
+work=$root/priv-work
 
 if [ ! -d $work ]; then
     mkdir $work || exit 1
