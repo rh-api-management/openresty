@@ -4,8 +4,8 @@ main_ver=1.13.6
 minor_ver=1rc0
 
 # plus version:
-main_ver=1.13.5
-minor_ver=0.2
+main_ver=1.13.6
+minor_ver=0.1
 
 version=$main_ver.$minor_ver
 echo $version
