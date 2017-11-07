@@ -1114,6 +1114,13 @@ cd ..
 
 #################################
 
+ver=0.01rc2
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-block-req/tarball/v$ver" -O "lua-resty-block-req-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-block-req-$ver.tar.gz || exit 1
+mv orinc-lua-resty-block-req-* lua-resty-block-req-$ver || exit 1
+
+#################################
+
 rm *.tar.gz
 
 cd ..
