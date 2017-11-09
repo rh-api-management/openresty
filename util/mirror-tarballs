@@ -499,7 +499,7 @@ mv orinc-lua-resty-zlib-* lua-resty-zlib-$ver || exit 1
 
 #################################
 
-ver=0.01rc11
+ver=0.01rc12
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-conf-nginx-module/tarball/v$ver" -O lua-conf-nginx-module-$ver.tar.gz || exit 1
 tar -xzf lua-conf-nginx-module-$ver.tar.gz || exit 1
 mv orinc-lua-conf-nginx-module-* lua-conf-nginx-module-$ver || exit 1
@@ -526,6 +526,10 @@ echo
 
 echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_conf_proxy_set_header.patch"
 patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_conf_proxy_set_header.patch || exit 1
+echo
+
+echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_conf_set_request_tag.patch"
+patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_conf_set_request_tag.patch || exit 1
 echo
 
 cd .. || exit 1
@@ -748,7 +752,7 @@ cd ..
 
 #################################
 
-ver=0.01rc5
+ver=0.01rc6
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-lmdb/tarball/v$ver" -O "lua-resty-lmdb-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-lmdb-$ver.tar.gz || exit 1
 mv orinc-lua-resty-lmdb-* lua-resty-lmdb-$ver || exit 1
