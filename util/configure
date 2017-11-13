@@ -1059,7 +1059,7 @@ _EOC_
 
             if ($platform eq 'msys') {
                 my $luajit_root = File::Spec->rel2abs("luajit-root");
-                $extra_opts .= " LDFLAGS=\"-shared -L$luajit_root -llua51\"";
+                $extra_opts .= " LDFLAGS=\"-shared -L$luajit_root -llua51 -lgd\"";
             }
 
             if ($on_solaris) {
@@ -1081,7 +1081,7 @@ _EOC_
             }
 
             if ($platform eq 'macosx') {
-                $extra_opts .= " LDFLAGS='-bundle -undefined dynamic_lookup'";
+                $extra_opts .= " LDFLAGS='-bundle -undefined dynamic_lookup -lgd'";
             }
 
             if (defined $cc) {
@@ -1206,6 +1206,10 @@ _EOC_
             if ($tag eq 'edge-pki') {
                 $no_flag = "no_edge_pki";
                 $pkg_prefix = "edge-pki";
+
+                if ($platform eq 'macosx') {
+                    $opts->{$no_flag} = 1;  # edge-pki not working on Mac OS X yet
+                }
             }
 
             unless ($opts->{$no_flag}) {
