@@ -1,0 +1,1060 @@
+diff --git a/auto/unix b/auto/unix
+index 10835f6..05b355e 100644
+--- a/auto/unix
++++ b/auto/unix
+@@ -990,3 +990,19 @@ ngx_feature_test='struct addrinfo *res;
+                   if (getaddrinfo("localhost", NULL, NULL, &res) != 0) return 1;
+                   freeaddrinfo(res)'
+ . auto/feature
++
++ngx_feature="Linux network namespaces"
++ngx_feature_name="NGX_HAVE_NET_NS"
++ngx_feature_run=no
++ngx_feature_incs="#include <sys/types.h>
++                  #include <sys/stat.h>
++                  #include <fcntl.h>
++                  #include <linux/sched.h>"
++ngx_feature_path=
++ngx_feature_libs=
++ngx_feature_test="int fd;
++                  if ((fd = open(\"/proc/self/ns/net\", O_RDONLY)) == -1)
++                  return 1;
++                  if (setns(fd, CLONE_NEWNET) == -1) return 1;
++                  close(fd)"
++. auto/feature
+diff --git a/src/core/nginx.c b/src/core/nginx.c
+index aa4986b..038881d 100644
+--- a/src/core/nginx.c
++++ b/src/core/nginx.c
+@@ -25,6 +25,9 @@ static char *ngx_set_cpu_affinity(ngx_conf_t *cf, ngx_command_t *cmd,
+     void *conf);
+ static char *ngx_set_worker_processes(ngx_conf_t *cf, ngx_command_t *cmd,
+     void *conf);
++#if (NGX_HAVE_NET_NS)
++static char *ngx_set_max_netns(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
++#endif
+ static char *ngx_load_module(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+ #if (NGX_HAVE_DLOPEN)
+ static void ngx_unload_module(void *data);
+@@ -40,6 +43,15 @@ static ngx_conf_enum_t  ngx_debug_points[] = {
+ 
+ static ngx_command_t  ngx_core_commands[] = {
+ 
++#if (NGX_HAVE_NET_NS)
++    { ngx_string("max_network_namespaces"),
++      NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_TAKE1,
++      ngx_set_max_netns,
++      0,
++      0,
++      NULL },
++#endif
++
+     { ngx_string("daemon"),
+       NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_FLAG,
+       ngx_conf_set_flag_slot,
+@@ -1575,6 +1587,79 @@ ngx_load_module(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ }
+ 
+ 
++#if (NGX_HAVE_NET_NS)
++
++static void
++ngx_clean_netns(void *data)
++{
++    ngx_cycle_t       *cycle;
++    ngx_queue_t       *lru_queue;
++    ngx_queue_t       *current;
++    ngx_netns_node_t  *node;
++
++    cycle = (ngx_cycle_t *) data;
++    lru_queue = &cycle->netns.lru_queue;
++
++    /* close all network namespace files in the lru cache */
++    current = ngx_queue_head(lru_queue);
++    while (current != lru_queue) {
++        node = ngx_queue_data(current, ngx_netns_node_t, queue);
++        if (ngx_close_file(node->netns_fd) == NGX_FILE_ERROR) {
++            ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
++                          ngx_close_file_n " network namespace "
++                          "failed");
++        }
++
++        current = ngx_queue_next(current);
++    }
++
++    return;
++}
++
++
++static char *
++ngx_set_max_netns(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
++{
++    ngx_int_t            netns_max;
++    ngx_str_t           *value;
++    ngx_cycle_t         *cycle;
++    ngx_pool_cleanup_t  *clean;
++
++    cycle = cf->cycle;
++
++    netns_max = cycle->netns.max;
++    if (netns_max > 0) {
++        return "is duplicate";
++    }
++
++    value = cf->args->elts;
++    netns_max = ngx_atoi(value[1].data, value[1].len);
++    if (netns_max == NGX_ERROR || netns_max == 0) {
++        return "invalid number";
++    }
++
++    cycle->netns.max = netns_max;
++
++    clean = ngx_pool_cleanup_add(cycle->pool, 0);
++    if (clean == NULL) {
++        return "failed to create memory pool cleaner for cycle->netns";
++    }
++
++    clean->data = cycle;
++    clean->handler = ngx_clean_netns;
++
++    ngx_rbtree_init(&cycle->netns.lru_rbtree,
++                    &cycle->netns.sentinel,
++                    ngx_str_rbtree_insert_value);
++
++    ngx_queue_init(&cycle->netns.lru_queue);
++
++    return NGX_CONF_OK;
++}
++
++#endif
++
++
+ #if (NGX_HAVE_DLOPEN)
+ 
+ static void
+diff --git a/src/core/ngx_connection.c b/src/core/ngx_connection.c
+index 9a74758..06caa3e 100644
+--- a/src/core/ngx_connection.c
++++ b/src/core/ngx_connection.c
+@@ -87,6 +87,10 @@ ngx_create_listening(ngx_conf_t *cf, struct sockaddr *sockaddr,
+     ls->fastopen = -1;
+ #endif
+ 
++#if (NGX_HAVE_NET_NS)
++    ls->netns_name = NGX_DEFAULT_NETNS_NAME;
++#endif
++
+     return ls;
+ }
+ 
+@@ -391,6 +395,13 @@ ngx_open_listening_sockets(ngx_cycle_t *cycle)
+     ngx_socket_t      s;
+     ngx_listening_t  *ls;
+ 
++#if (NGX_HAVE_NET_NS)
++    u_char            path[NGX_MAX_NETNS_PATH_LEN];
++    u_char           *p;
++    ngx_fd_t          netns_fd;
++    ngx_file_info_t   fi;
++#endif
++
+     reuseaddr = 1;
+ #if (NGX_SUPPRESS_WARN)
+     failed = 0;
+@@ -450,7 +461,80 @@ ngx_open_listening_sockets(ngx_cycle_t *cycle)
+                 continue;
+             }
+ 
+-            s = ngx_socket(ls[i].sockaddr->sa_family, ls[i].type, 0);
++#if (NGX_HAVE_NET_NS)
++            if (ngx_strcmp(ls[i].netns_name, NGX_DEFAULT_NETNS_NAME) != 0) {
++                /*
++                 * path[NGX_MAX_NETNS_PATH_LEN] is big enough for the network
++                 * namespace file name. we make sure that the network
++                 * namespace name length is shorter than NGX_MAX_NETNS_LEN.
++                 */
++                p = ngx_snprintf(path, NGX_MAX_NETNS_PATH_LEN,
++                                 NGX_NETNS_PREFIX "%s",
++                                 ls[i].netns_name);
++                *p++ = '\0';
++
++                if (ngx_file_info(path, &fi) == NGX_FILE_ERROR) {
++                    ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
++                                  "failed to stat() the file: %s",
++                                  path);
++
++                    return NGX_ERROR;
++                }
++
++                ls[i].netns_uniq = ngx_file_uniq(&fi);
++
++                netns_fd = ngx_open_file(path, NGX_FILE_RDONLY,
++                                         0, NGX_FILE_OWNER_ACCESS);
++                if (netns_fd == NGX_INVALID_FILE) {
++                    ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
++                                  "failed to open the network "
++                                  "namespace file: \"%s\" ", path);
++
++                    return NGX_ERROR;
++                }
++
++                if (setns(netns_fd, CLONE_NEWNET) == NGX_FILE_ERROR) {
++                    ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
++                                  "failed to set the environment "
++                                  "to the new network namespace");
++
++                    if (ngx_close_file(netns_fd) == NGX_FILE_ERROR) {
++                        ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
++                                      "failed to close the network "
++                                      "namespace file");
++                    }
++
++                    return NGX_ERROR;
++                }
++
++                s = ngx_socket(ls[i].sockaddr->sa_family, ls[i].type, 0);
++
++                if (setns(cycle->netns.default_netns_fd, CLONE_NEWNET)
++                    == NGX_FILE_ERROR)
++                {
++                    ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
++                                  "failed to set the environment "
++                                  "to the default network namespace");
++                    return NGX_ERROR;
++                }
++
++                /* after creating socket, network namespace
++                 * is no longer needed.
++                 */
++                if (ngx_close_file(netns_fd) == NGX_FILE_ERROR) {
++                    ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
++                                  "failed to close the network "
++                                  "namespace file");
++                    return NGX_ERROR;
++                }
++
++            } else {
++#endif
++                s = ngx_socket(ls[i].sockaddr->sa_family, ls[i].type, 0);
++#if (NGX_HAVE_NET_NS)
++                ls[i].netns_uniq = cycle->netns.default_netns_uniq;
++            }
++#endif
+ 
+             if (s == (ngx_socket_t) -1) {
+                 ngx_log_error(NGX_LOG_EMERG, log, ngx_socket_errno,
+diff --git a/src/core/ngx_connection.h b/src/core/ngx_connection.h
+index e4dfe58..2bce219 100644
+--- a/src/core/ngx_connection.h
++++ b/src/core/ngx_connection.h
+@@ -18,6 +18,11 @@ typedef struct ngx_listening_s  ngx_listening_t;
+ struct ngx_listening_s {
+     ngx_socket_t        fd;
+ 
++#if (NGX_HAVE_NET_NS)
++    ngx_file_uniq_t     netns_uniq;
++    char               *netns_name;
++#endif
++
+     struct sockaddr    *sockaddr;
+     socklen_t           socklen;    /* size of sockaddr */
+     size_t              addr_text_max_len;
+@@ -123,6 +128,10 @@ struct ngx_connection_s {
+     ngx_event_t        *read;
+     ngx_event_t        *write;
+ 
++#if (NGX_HAVE_NET_NS)
++    ngx_file_uniq_t     netns_uniq;
++#endif
++
+     ngx_socket_t        fd;
+ 
+     ngx_recv_pt         recv;
+diff --git a/src/core/ngx_cycle.c b/src/core/ngx_cycle.c
+index 675a506..b12b474 100644
+--- a/src/core/ngx_cycle.c
++++ b/src/core/ngx_cycle.c
+@@ -9,6 +9,10 @@
+ #include <ngx_core.h>
+ #include <ngx_event.h>
+ 
++#if (NGX_HAVE_NET_NS)
++#define NETNS_RBTREE_KEY  0
++#endif
++
+ 
+ static void ngx_destroy_cycle_pools(ngx_conf_t *conf);
+ static ngx_int_t ngx_init_zone_pool(ngx_cycle_t *cycle,
+@@ -54,6 +58,13 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
+     ngx_core_module_t   *module;
+     char                 hostname[NGX_MAXHOSTNAMELEN];
+ 
++#if (NGX_HAVE_NET_NS)
++    u_char               path[NGX_MAX_NETNS_PATH_LEN];
++    u_char              *p;
++    ngx_fd_t             netns_fd;
++    ngx_file_info_t      fi;
++#endif
++
+     ngx_timezone_update();
+ 
+     /* force localtime update with a new timezone */
+@@ -78,6 +89,35 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
+         return NULL;
+     }
+ 
++#if (NGX_HAVE_NET_NS)
++    if (ngx_is_init_cycle(old_cycle)) {
++        if (ngx_file_info(NGX_DEFAULT_NETNS_PATH, &fi) == NGX_FILE_ERROR) {
++            ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
++                          "failed to stat() file: " NGX_DEFAULT_NETNS_PATH);
++            ngx_destroy_pool(pool);
++            return NULL;
++        }
++
++        netns_fd = ngx_open_file(NGX_DEFAULT_NETNS_PATH,
++                                 NGX_FILE_RDONLY,
++                                 0,
++                                 NGX_FILE_OWNER_ACCESS);
++        if (netns_fd == NGX_INVALID_FILE) {
++            ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
++                          "failed to open() file: " NGX_DEFAULT_NETNS_PATH);
++            ngx_destroy_pool(pool);
++            return NULL;
++        }
++
++        cycle->netns.default_netns_uniq = ngx_file_uniq(&fi);
++        cycle->netns.default_netns_fd = netns_fd;
++
++    } else {
++        cycle->netns.default_netns_uniq = old_cycle->netns.default_netns_uniq;
++        cycle->netns.default_netns_fd = old_cycle->netns.default_netns_fd;
++    }
++#endif
++
+     cycle->pool = pool;
+     cycle->log = log;
+     cycle->old_cycle = old_cycle;
+@@ -517,6 +557,40 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
+                     continue;
+                 }
+ 
++#if (NGX_HAVE_NET_NS)
++                if (ngx_strcmp(nls[n].netns_name, NGX_DEFAULT_NETNS_NAME)
++                    != 0
++                    )
++                {
++                    /*
++                     * path[NGX_MAX_NETNS_PATH_LEN] is big enough for the network
++                     * namespace file name. we make sure that the network
++                     * namespace name length is shorter than NGX_MAX_NETNS_LEN.
++                     */
++                    p = ngx_snprintf(path, NGX_MAX_NETNS_PATH_LEN,
++                                     NGX_NETNS_PREFIX "%s",
++                                     nls[n].netns_name);
++                    *p++ = '\0';
++
++                    if (ngx_file_info(path, &fi) == NGX_FILE_ERROR) {
++                        ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
++                                      "failed to stat() the file: %s",
++                                      path);
++
++                        goto failed;
++                    }
++
++                    nls[n].netns_uniq = ngx_file_uniq(&fi);
++
++                } else {
++                    nls[n].netns_uniq = cycle->netns.default_netns_uniq;
++                }
++
++                if (ls[i].netns_uniq != nls[n].netns_uniq) {
++                    continue;
++                }
++#endif
++
+                 if (ngx_cmp_sockaddr(nls[n].sockaddr, nls[n].socklen,
+                                      ls[i].sockaddr, ls[i].socklen, 1)
+                     == NGX_OK)
+@@ -1380,3 +1454,176 @@ ngx_shutdown_timer_handler(ngx_event_t *ev)
+         c[i].read->handler(c[i].read);
+     }
+ }
++
++
++#if (NGX_HAVE_NET_NS)
++
++/*
++ * the values pointed by netns_fd, netns_uniq are our need.
++ * err, errlen are used for get error string.
++ */
++ngx_int_t
++ngx_get_or_add_netns(const u_char *netns, size_t netns_len,
++    ngx_fd_t *netns_fd, ngx_file_uniq_t *netns_uniq,
++    u_char *err, size_t *errlen)
++{
++    u_char             path[NGX_MAX_NETNS_PATH_LEN];
++    u_char            *p;
++    ngx_str_t          ns;
++    ngx_fd_t           fd;
++    ngx_pool_t        *pool;
++    ngx_cycle_t       *cycle;
++    ngx_queue_t       *lru_queue;
++    ngx_rbtree_t      *lru_rbtree;
++    ngx_file_info_t    fi;
++    ngx_netns_node_t  *node;
++
++    cycle = (ngx_cycle_t *) ngx_cycle;
++
++    if (cycle->netns.max == 0) {
++        p = ngx_snprintf(err, *errlen, "directive \"max_network_namespaces\" "
++                         "is missing in nginx.conf");
++        *errlen = p - err;
++
++        return NGX_ERROR;
++    }
++
++    if (netns_len > NGX_MAX_NETNS_LEN) {
++        p = ngx_snprintf(err, *errlen,
++                         "the length (%ud) of network namespace "
++                         "name exceeds upper limit (%ud)",
++                         netns_len, NGX_MAX_NETNS_LEN);
++        *errlen = p - err;
++
++        return NGX_ERROR;
++    }
++
++    lru_queue = &cycle->netns.lru_queue;
++    lru_rbtree = &cycle->netns.lru_rbtree;
++    ns.len = netns_len;
++    ns.data = (u_char *) netns;
++
++    /*
++     * find a network namespace node in the cache by name
++     * and insert the node to the head of the lru queue.
++     */
++    node = (ngx_netns_node_t *) ngx_str_rbtree_lookup(lru_rbtree, &ns,
++                                                      NETNS_RBTREE_KEY);
++    if (node != NULL) {
++        ngx_queue_remove(&node->queue);
++
++        ngx_queue_insert_head(lru_queue, &node->queue);
++
++        *netns_fd = node->netns_fd;
++        *netns_uniq = node->netns_uniq;
++
++        return NGX_OK;
++    }
++
++    /*
++     * path[NGX_MAX_NETNS_PATH_LEN] is big enough for the network
++     * namespace file name. we make sure that the network
++     * namespace name length is shorter than NGX_MAX_NETNS_LEN.
++     */
++    p = ngx_copy(path, NGX_NETNS_PREFIX, sizeof(NGX_NETNS_PREFIX) - 1);
++    p = ngx_copy(p, ns.data, ns.len);
++    *p++ = '\0';
++
++    if (ngx_file_info(path, &fi) == NGX_FILE_ERROR) {
++        p = ngx_snprintf(err, *errlen,
++                         "failed to stat() the file: %s",
++                         path);
++        p = ngx_log_errno(p, err + *errlen, ngx_errno);
++        *errlen = p - err;
++
++        return NGX_ERROR;
++    }
++
++    fd = ngx_open_file(path, NGX_FILE_RDONLY,
++                       0, NGX_FILE_OWNER_ACCESS);
++    if (fd == NGX_INVALID_FILE) {
++        p = ngx_snprintf(err, *errlen,
++                         "failed to open the network "
++                         "namespace file: \"%s\" ", path);
++        p = ngx_log_errno(p, err + *errlen, ngx_errno);
++        *errlen = p - err;
++
++        return NGX_ERROR;
++    }
++
++    if (cycle->netns.count >= cycle->netns.max) {
++        /*
++         * cache is full, so we get a node in the lru rbtree
++         */
++        if (!ngx_queue_empty(lru_queue)) {
++            node = ngx_queue_data(ngx_queue_last(lru_queue),
++                                  ngx_netns_node_t, queue);
++
++            ngx_queue_remove(&node->queue);
++
++            ngx_rbtree_delete(lru_rbtree, &node->sn.node);
++
++            if (ngx_close_file(node->netns_fd) == NGX_FILE_ERROR) {
++                ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
++                              "failed to close the least recently "
++                              "used network namespace file");
++            }
++
++        } else {
++            p = ngx_snprintf(err, *errlen,
++                             "network namespace count reaches "
++                             "upper limit, but the lru  "
++                             "queue is empty");
++            *errlen = p - err;
++
++            if (ngx_close_file(fd) == NGX_FILE_ERROR) {
++                ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
++                              "failed to close the "
++                              "network namespace file");
++            }
++
++            return NGX_ERROR;
++        }
++
++        ngx_log_debug0(NGX_LOG_DEBUG_CORE, cycle->log, 0,
++                       "reused the least recently "
++                       "used network namespace node");
++
++    } else {
++        pool = cycle->pool;
++        node = ngx_pcalloc(pool, sizeof(ngx_netns_node_t));
++        if (node == NULL) {
++            p = ngx_snprintf(err, *errlen, "no memory");
++            *errlen = p - err;
++
++            if (ngx_close_file(fd) == NGX_FILE_ERROR) {
++                ngx_log_error(NGX_LOG_EMERG, cycle->log, ngx_errno,
++                              "failed to close the "
++                              "network namespace file");
++            }
++
++            return NGX_ERROR;
++        }
++
++        cycle->netns.count++;
++    }
++
++    node->netns_fd = fd;
++    node->netns_uniq = ngx_file_uniq(&fi);
++
++    node->sn.node.key = NETNS_RBTREE_KEY;
++    node->sn.str.data = node->netns_name;
++    node->sn.str.len = ns.len;
++    ngx_memcpy(node->sn.str.data, ns.data, ns.len);
++
++    ngx_rbtree_insert(lru_rbtree, &node->sn.node);
++
++    ngx_queue_insert_head(lru_queue, &node->queue);
++
++    *netns_fd = node->netns_fd;
++    *netns_uniq = node->netns_uniq;
++
++    return NGX_OK;
++}
++
++#endif
+diff --git a/src/core/ngx_cycle.h b/src/core/ngx_cycle.h
+index c342365..5774b14 100644
+--- a/src/core/ngx_cycle.h
++++ b/src/core/ngx_cycle.h
+@@ -28,6 +28,17 @@
+ #define HAVE_INTERCEPT_ERROR_LOG_PATCH
+ 
+ 
++#if (NGX_HAVE_NET_NS)
++#define NGX_DEFAULT_NETNS_FD               -100
++#define NGX_DEFAULT_NETNS_PATH             "/proc/self/ns/net"
++#define NGX_DEFAULT_NETNS_NAME             NGX_DEFAULT_NETNS_PATH
++#define NGX_MAX_NETNS_LEN                  64
++#define NGX_NETNS_PREFIX                   "/var/run/netns/"
++#define NGX_MAX_NETNS_PATH_LEN                                               \
++    (NGX_MAX_NETNS_LEN + sizeof(NGX_NETNS_PREFIX) - 1 + 1)
++#endif
++
++
+ typedef struct ngx_shm_zone_s  ngx_shm_zone_t;
+ 
+ typedef ngx_int_t (*ngx_shm_zone_init_pt) (ngx_shm_zone_t *zone, void *data);
+@@ -43,7 +54,34 @@ struct ngx_shm_zone_s {
+ };
+ 
+ 
++#if (NGX_HAVE_NET_NS)
++typedef struct {
++    ngx_rbtree_node_t         sentinel;
++    ngx_rbtree_t              lru_rbtree;
++    ngx_queue_t               lru_queue;
++    ngx_int_t                 max;
++    ngx_int_t                 count;
++    ngx_file_uniq_t           default_netns_uniq;
++    ngx_fd_t                  default_netns_fd;
++} ngx_core_netns_t;
++
++
++typedef struct {
++/*must in first*/
++    ngx_str_node_t            sn;
++    ngx_queue_t               queue;
++    ngx_file_uniq_t           netns_uniq;
++    u_char                    netns_name[NGX_MAX_NETNS_LEN];
++    ngx_fd_t                  netns_fd;
++} ngx_netns_node_t;
++#endif
++
++
+ struct ngx_cycle_s {
++#if (NGX_HAVE_NET_NS)
++    ngx_core_netns_t          netns;
++#endif
++
+     void                  ****conf_ctx;
+     ngx_pool_t               *pool;
+ 
+@@ -144,6 +182,11 @@ ngx_cpuset_t *ngx_get_cpu_affinity(ngx_uint_t n);
+ ngx_shm_zone_t *ngx_shared_memory_add(ngx_conf_t *cf, ngx_str_t *name,
+     size_t size, void *tag);
+ void ngx_set_shutdown_timer(ngx_cycle_t *cycle);
++#if (NGX_HAVE_NET_NS)
++ngx_int_t ngx_get_or_add_netns(const u_char *netns, size_t netns_len,
++    ngx_fd_t *netns_fd, ngx_file_uniq_t *netns_uniq,
++    u_char *err, size_t *errlen);
++#endif
+ 
+ 
+ extern volatile ngx_cycle_t  *ngx_cycle;
+diff --git a/src/event/ngx_event_accept.c b/src/event/ngx_event_accept.c
+index 7756370..060081a 100644
+--- a/src/event/ngx_event_accept.c
++++ b/src/event/ngx_event_accept.c
+@@ -220,6 +220,10 @@ ngx_event_accept(ngx_event_t *ev)
+         c->local_sockaddr = ls->sockaddr;
+         c->local_socklen = ls->socklen;
+ 
++#if (NGX_HAVE_NET_NS)
++        c->netns_uniq = ls->netns_uniq;
++#endif
++
+ #if (NGX_HAVE_UNIX_DOMAIN)
+         if (c->sockaddr->sa_family == AF_UNIX) {
+             c->tcp_nopush = NGX_TCP_NOPUSH_DISABLED;
+diff --git a/src/event/ngx_event_connect.c b/src/event/ngx_event_connect.c
+index c5bb806..5ced436 100644
+--- a/src/event/ngx_event_connect.c
++++ b/src/event/ngx_event_connect.c
+@@ -38,7 +38,32 @@ ngx_event_connect_peer(ngx_peer_connection_t *pc)
+ 
+     type = (pc->type ? pc->type : SOCK_STREAM);
+ 
+-    s = ngx_socket(pc->sockaddr->sa_family, type, 0);
++#if (NGX_HAVE_NET_NS)
++    if (pc->netns_fd != NGX_DEFAULT_NETNS_FD) {
++        if (setns(pc->netns_fd, CLONE_NEWNET) == NGX_FILE_ERROR) {
++            ngx_log_error(NGX_LOG_EMERG, pc->log, ngx_errno,
++                          "failed to set the environment "
++                          "to the new network namespace");
++            return NGX_ERROR;
++        }
++
++        s = ngx_socket(pc->sockaddr->sa_family, type, 0);
++
++        if (setns(ngx_cycle->netns.default_netns_fd, CLONE_NEWNET)
++            == NGX_FILE_ERROR)
++        {
++            ngx_log_error(NGX_LOG_EMERG, pc->log, ngx_errno,
++                          "failed to set the environment "
++                          "to the default network namespace");
++            return NGX_ERROR;
++        }
++
++    } else {
++#endif
++        s = ngx_socket(pc->sockaddr->sa_family, type, 0);
++#if (NGX_HAVE_NET_NS)
++    }
++#endif
+ 
+     ngx_log_debug2(NGX_LOG_DEBUG_EVENT, pc->log, 0, "%s socket %d",
+                    (type == SOCK_STREAM) ? "stream" : "dgram", s);
+@@ -179,6 +204,14 @@ ngx_event_connect_peer(ngx_peer_connection_t *pc)
+ 
+     pc->connection = c;
+ 
++#if (NGX_HAVE_NET_NS)
++    /*
++     * pc->netns_uniq must be set before calling this
++     * function
++     */
++    c->netns_uniq = pc->netns_uniq;
++#endif
++
+     c->number = ngx_atomic_fetch_add(ngx_connection_counter, 1);
+ 
+     if (ngx_add_conn) {
+diff --git a/src/event/ngx_event_connect.h b/src/event/ngx_event_connect.h
+index 72d21d7..4f814fe 100644
+--- a/src/event/ngx_event_connect.h
++++ b/src/event/ngx_event_connect.h
+@@ -55,6 +55,11 @@ struct ngx_peer_connection_s {
+ 
+     ngx_addr_t                      *local;
+ 
++#if (NGX_HAVE_NET_NS)
++    ngx_file_uniq_t                  netns_uniq;
++    ngx_fd_t                         netns_fd;
++#endif
++
+     int                              type;
+     int                              rcvbuf;
+ 
+diff --git a/src/event/ngx_event_openssl_stapling.c b/src/event/ngx_event_openssl_stapling.c
+index 0bea5e7..25a0282 100644
+--- a/src/event/ngx_event_openssl_stapling.c
++++ b/src/event/ngx_event_openssl_stapling.c
+@@ -1034,6 +1034,11 @@ ngx_ssl_ocsp_connect(ngx_ssl_ocsp_ctx_t *ctx)
+     ctx->peer.log = ctx->log;
+     ctx->peer.log_error = NGX_ERROR_ERR;
+ 
++#if (NGX_HAVE_NET_NS)
++    ctx->peer.netns_fd = NGX_DEFAULT_NETNS_FD;
++    ctx->peer.netns_uniq = ngx_cycle->netns.default_netns_uniq;
++#endif
++
+     rc = ngx_event_connect_peer(&ctx->peer);
+ 
+     ngx_log_debug0(NGX_LOG_DEBUG_EVENT, ctx->log, 0,
+diff --git a/src/http/modules/ngx_http_upstream_keepalive_module.c b/src/http/modules/ngx_http_upstream_keepalive_module.c
+index 0048e6b..02b5d05 100644
+--- a/src/http/modules/ngx_http_upstream_keepalive_module.c
++++ b/src/http/modules/ngx_http_upstream_keepalive_module.c
+@@ -240,6 +240,12 @@ ngx_http_upstream_get_keepalive_peer(ngx_peer_connection_t *pc, void *data)
+                          item->socklen, pc->socklen)
+             == 0)
+         {
++#if (NGX_HAVE_NET_NS)
++            if (item->connection->netns_uniq != pc->netns_uniq) {
++                continue;
++            }
++#endif
++
+             ngx_queue_remove(q);
+             ngx_queue_insert_head(&kp->conf->free, q);
+ 
+diff --git a/src/http/ngx_http.c b/src/http/ngx_http.c
+index 288d591..a5700ec 100644
+--- a/src/http/ngx_http.c
++++ b/src/http/ngx_http.c
+@@ -1167,7 +1167,13 @@ ngx_http_add_listen(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
+     port = cmcf->ports->elts;
+     for (i = 0; i < cmcf->ports->nelts; i++) {
+ 
+-        if (p != port[i].port || sa->sa_family != port[i].family) {
++        if (p != port[i].port || sa->sa_family != port[i].family
++#if (NGX_HAVE_NET_NS)
++            || ngx_strcmp(lsopt->netns_name, port[i].netns_name)
++            != 0
++#endif
++            )
++        {
+             continue;
+         }
+ 
+@@ -1183,6 +1189,10 @@ ngx_http_add_listen(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
+         return NGX_ERROR;
+     }
+ 
++#if (NGX_HAVE_NET_NS)
++    port->netns_name = lsopt->netns_name;
++#endif
++
+     port->family = sa->sa_family;
+     port->port = p;
+     port->addrs.elts = NULL;
+@@ -1776,6 +1786,10 @@ ngx_http_add_listening(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
+     ls->reuseport = addr->opt.reuseport;
+ #endif
+ 
++#if (NGX_HAVE_NET_NS)
++    ls->netns_name = addr->opt.netns_name;
++#endif
++
+     return ls;
+ }
+ 
+diff --git a/src/http/ngx_http_core_module.c b/src/http/ngx_http_core_module.c
+index 8e5a3db..6295e65 100644
+--- a/src/http/ngx_http_core_module.c
++++ b/src/http/ngx_http_core_module.c
+@@ -3775,6 +3775,10 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+     lsopt.ipv6only = 1;
+ #endif
+ 
++#if (NGX_HAVE_NET_NS)
++    lsopt.netns_name = NGX_DEFAULT_NETNS_NAME;
++#endif
++
+     (void) ngx_sock_ntop(&lsopt.sockaddr.sockaddr, lsopt.socklen, lsopt.addr,
+                          NGX_SOCKADDR_STRLEN, 1);
+ 
+@@ -4080,6 +4084,39 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+             continue;
+         }
+ 
++#if (NGX_HAVE_NET_NS)
++        if (ngx_strncmp(value[n].data, "netns=", 6) == 0) {
++            if (cf->cycle->netns.max == 0) {
++                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
++                                   "directive \"max_network_namespaces\" "
++                                   "is missing");
++
++                return NGX_CONF_ERROR;
++            }
++
++            if (value[n].len - 6 > NGX_MAX_NETNS_LEN) {
++                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
++                                   "the length (%ud) of network namespace "
++                                   "name exceeds upper limit (%ud)",
++                                   value[n].len - 6, NGX_MAX_NETNS_LEN);
++
++                return NGX_CONF_ERROR;
++            }
++
++            lsopt.netns_name = ngx_pcalloc(cf->cycle->pool,
++                                           value[n].len - 6 + 1);
++            if (lsopt.netns_name == NULL) {
++                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "no memory");
++
++                return NGX_CONF_ERROR;
++            }
++
++            ngx_memcpy(lsopt.netns_name, value[n].data + 6, value[n].len - 6);
++
++            continue;
++        }
++#endif
++
+         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                            "invalid parameter \"%V\"", &value[n]);
+         return NGX_CONF_ERROR;
+diff --git a/src/http/ngx_http_core_module.h b/src/http/ngx_http_core_module.h
+index a6128b5..58d4356 100644
+--- a/src/http/ngx_http_core_module.h
++++ b/src/http/ngx_http_core_module.h
+@@ -97,6 +97,10 @@ typedef struct {
+     int                        tcp_keepcnt;
+ #endif
+ 
++#if (NGX_HAVE_NET_NS)
++    char                      *netns_name;
++#endif
++
+ #if (NGX_HAVE_DEFERRED_ACCEPT && defined SO_ACCEPTFILTER)
+     char                      *accept_filter;
+ #endif
+@@ -263,6 +267,10 @@ typedef struct {
+ 
+ 
+ typedef struct {
++#if (NGX_HAVE_NET_NS)
++    char                      *netns_name;
++#endif
++
+     ngx_int_t                  family;
+     in_port_t                  port;
+     ngx_array_t                addrs;     /* array of ngx_http_conf_addr_t */
+diff --git a/src/http/ngx_http_upstream.c b/src/http/ngx_http_upstream.c
+index 2d14067..a30ebb5 100644
+--- a/src/http/ngx_http_upstream.c
++++ b/src/http/ngx_http_upstream.c
+@@ -487,6 +487,11 @@ ngx_http_upstream_create(ngx_http_request_t *r)
+     u->peer.log = r->connection->log;
+     u->peer.log_error = NGX_ERROR_ERR;
+ 
++#if (NGX_HAVE_NET_NS)
++    u->peer.netns_fd = NGX_DEFAULT_NETNS_FD;
++    u->peer.netns_uniq = ngx_cycle->netns.default_netns_uniq;
++#endif
++
+ #if (NGX_HTTP_CACHE)
+     r->cache = NULL;
+ #endif
+diff --git a/src/mail/ngx_mail_auth_http_module.c b/src/mail/ngx_mail_auth_http_module.c
+index 6b57358..713c02d 100644
+--- a/src/mail/ngx_mail_auth_http_module.c
++++ b/src/mail/ngx_mail_auth_http_module.c
+@@ -201,6 +201,11 @@ ngx_mail_auth_http_init(ngx_mail_session_t *s)
+     ctx->peer.log = s->connection->log;
+     ctx->peer.log_error = NGX_ERROR_ERR;
+ 
++#if (NGX_HAVE_NET_NS)
++    ctx->peer.netns_fd = NGX_DEFAULT_NETNS_FD;
++    ctx->peer.netns_uniq = ngx_cycle->netns.netns_uniq;
++#endif
++
+     rc = ngx_event_connect_peer(&ctx->peer);
+ 
+     if (rc == NGX_ERROR || rc == NGX_BUSY || rc == NGX_DECLINED) {
+diff --git a/src/mail/ngx_mail_proxy_module.c b/src/mail/ngx_mail_proxy_module.c
+index 007284b..ea2cb16 100644
+--- a/src/mail/ngx_mail_proxy_module.c
++++ b/src/mail/ngx_mail_proxy_module.c
+@@ -135,6 +135,11 @@ ngx_mail_proxy_init(ngx_mail_session_t *s, ngx_addr_t *peer)
+     p->upstream.log = s->connection->log;
+     p->upstream.log_error = NGX_ERROR_ERR;
+ 
++#if (NGX_HAVE_NET_NS)
++    p->upstream.netns_fd = NGX_DEFAULT_NETNS_FD;
++    p->upstream.netns_uniq = ngx_cycle->netns.netns_uniq;
++#endif
++
+     rc = ngx_event_connect_peer(&p->upstream);
+ 
+     if (rc == NGX_ERROR || rc == NGX_BUSY || rc == NGX_DECLINED) {
+diff --git a/src/stream/ngx_stream.c b/src/stream/ngx_stream.c
+index 0efbda8..6174202 100644
+--- a/src/stream/ngx_stream.c
++++ b/src/stream/ngx_stream.c
+@@ -395,7 +395,12 @@ ngx_stream_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
+ 
+         if (p == port[i].port
+             && listen->type == port[i].type
+-            && sa->sa_family == port[i].family)
++            && sa->sa_family == port[i].family
++#if (NGX_HAVE_NET_NS)
++            && ngx_strcmp(listen->netns_name, port[i].netns_name)
++            == 0
++#endif
++            )
+         {
+             /* a port is already in the port list */
+ 
+@@ -414,6 +419,9 @@ ngx_stream_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
+     port->family = sa->sa_family;
+     port->type = listen->type;
+     port->port = p;
++#if (NGX_HAVE_NET_NS)
++    port->netns_name = listen->netns_name;
++#endif
+ 
+     if (ngx_array_init(&port->addrs, cf->temp_pool, 2,
+                        sizeof(ngx_stream_conf_addr_t))
+@@ -514,6 +522,10 @@ ngx_stream_optimize_servers(ngx_conf_t *cf, ngx_array_t *ports)
+             ls->reuseport = addr[i].opt.reuseport;
+ #endif
+ 
++#if (NGX_HAVE_NET_NS)
++            ls->netns_name = addr[i].opt.netns_name;
++#endif
++
+             stport = ngx_palloc(cf->pool, sizeof(ngx_stream_port_t));
+             if (stport == NULL) {
+                 return NGX_CONF_ERROR;
+diff --git a/src/stream/ngx_stream.h b/src/stream/ngx_stream.h
+index 8bf227c..517595f 100644
+--- a/src/stream/ngx_stream.h
++++ b/src/stream/ngx_stream.h
+@@ -47,6 +47,10 @@ typedef struct {
+     /* server ctx */
+     ngx_stream_conf_ctx_t         *ctx;
+ 
++#if (NGX_HAVE_NET_NS)
++    char                          *netns_name;
++#endif
++
+     unsigned                       bind:1;
+     unsigned                       wildcard:1;
+     unsigned                       ssl:1;
+@@ -99,6 +103,10 @@ typedef struct {
+ 
+ 
+ typedef struct {
++#if (NGX_HAVE_NET_NS)
++    char                          *netns_name;
++#endif
++
+     int                            family;
+     int                            type;
+     in_port_t                      port;
+diff --git a/src/stream/ngx_stream_core_module.c b/src/stream/ngx_stream_core_module.c
+index 272708d..c16de47 100644
+--- a/src/stream/ngx_stream_core_module.c
++++ b/src/stream/ngx_stream_core_module.c
+@@ -617,6 +617,10 @@ ngx_stream_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+     ls->ipv6only = 1;
+ #endif
+ 
++#if (NGX_HAVE_NET_NS)
++    ls->netns_name = NGX_DEFAULT_NETNS_NAME;
++#endif
++
+     backlog = 0;
+ 
+     for (i = 2; i < cf->args->nelts; i++) {
+@@ -839,6 +843,39 @@ ngx_stream_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+             continue;
+         }
+ 
++#if (NGX_HAVE_NET_NS)
++        if (ngx_strncmp(value[i].data, "netns=", 6) == 0) {
++            if (cf->cycle->netns.max == 0) {
++                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
++                                   "directive \"max_network_namespaces\" "
++                                   "is missing");
++
++                return NGX_CONF_ERROR;
++            }
++
++            if (value[i].len - 6 > NGX_MAX_NETNS_LEN) {
++                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
++                                   "the length (%ud) of network namespace "
++                                   "name exceeds upper limit (%ud)",
++                                   value[i].len - 6, NGX_MAX_NETNS_LEN);
++
++                return NGX_CONF_ERROR;
++            }
++
++            ls->netns_name = ngx_pcalloc(cf->cycle->pool,
++                                         value[i].len - 6 + 1);
++            if (ls->netns_name == NULL) {
++                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "no memory");
++
++                return NGX_CONF_ERROR;
++            }
++
++            ngx_memcpy(ls->netns_name, value[i].data + 6, value[i].len - 6);
++
++            continue;
++        }
++#endif
++
+         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                            "the invalid \"%V\" parameter", &value[i]);
+         return NGX_CONF_ERROR;
+@@ -878,6 +915,12 @@ ngx_stream_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+             continue;
+         }
+ 
++#if (NGX_HAVE_NET_NS)
++        if (ngx_strcmp(ls->netns_name, als[i].netns_name) != 0) {
++            continue;
++        }
++#endif
++
+         ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                            "duplicate \"%V\" address and port pair", &u.url);
+         return NGX_CONF_ERROR;
+diff --git a/src/stream/ngx_stream_proxy_module.c b/src/stream/ngx_stream_proxy_module.c
+index 2ad1c8a..4c0ff1d 100644
+--- a/src/stream/ngx_stream_proxy_module.c
++++ b/src/stream/ngx_stream_proxy_module.c
+@@ -392,6 +392,11 @@ ngx_stream_proxy_handler(ngx_stream_session_t *s)
+     u->peer.log = c->log;
+     u->peer.log_error = NGX_ERROR_ERR;
+ 
++#if (NGX_HAVE_NET_NS)
++    u->peer.netns_fd = NGX_DEFAULT_NETNS_FD;
++    u->peer.netns_uniq = ngx_cycle->netns.default_netns_uniq;
++#endif
++
+     if (ngx_stream_proxy_set_local(s, u, pscf->local) != NGX_OK) {
+         ngx_stream_proxy_finalize(s, NGX_STREAM_INTERNAL_SERVER_ERROR);
+         return;
