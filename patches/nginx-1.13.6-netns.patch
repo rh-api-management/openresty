@@ -1,5 +1,5 @@
 diff --git a/auto/unix b/auto/unix
-index 10835f6..05b355e 100644
+index 10835f6c..05b355e6 100644
 --- a/auto/unix
 +++ b/auto/unix
 @@ -990,3 +990,19 @@ ngx_feature_test='struct addrinfo *res;
@@ -23,27 +23,28 @@ index 10835f6..05b355e 100644
 +                  close(fd)"
 +. auto/feature
 diff --git a/src/core/nginx.c b/src/core/nginx.c
-index aa4986b..038881d 100644
+index c3a29cc4..de5e20b8 100644
 --- a/src/core/nginx.c
 +++ b/src/core/nginx.c
-@@ -25,6 +25,9 @@ static char *ngx_set_cpu_affinity(ngx_conf_t *cf, ngx_command_t *cmd,
+@@ -25,6 +25,10 @@ static char *ngx_set_cpu_affinity(ngx_conf_t *cf, ngx_command_t *cmd,
      void *conf);
  static char *ngx_set_worker_processes(ngx_conf_t *cf, ngx_command_t *cmd,
      void *conf);
 +#if (NGX_HAVE_NET_NS)
-+static char *ngx_set_max_netns(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
++static char *ngx_set_netns_cache(ngx_conf_t *cf, ngx_command_t *cmd,
++    void *conf);
 +#endif
  static char *ngx_load_module(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
  #if (NGX_HAVE_DLOPEN)
  static void ngx_unload_module(void *data);
-@@ -40,6 +43,15 @@ static ngx_conf_enum_t  ngx_debug_points[] = {
+@@ -40,6 +44,15 @@ static ngx_conf_enum_t  ngx_debug_points[] = {
  
  static ngx_command_t  ngx_core_commands[] = {
  
 +#if (NGX_HAVE_NET_NS)
-+    { ngx_string("max_network_namespaces"),
-+      NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_TAKE1,
-+      ngx_set_max_netns,
++    { ngx_string("network_namespace_cache"),
++      NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_TAKE12,
++      ngx_set_netns_cache,
 +      0,
 +      0,
 +      NULL },
@@ -52,7 +53,7 @@ index aa4986b..038881d 100644
      { ngx_string("daemon"),
        NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_FLAG,
        ngx_conf_set_flag_slot,
-@@ -1575,6 +1587,79 @@ ngx_load_module(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+@@ -1573,6 +1586,122 @@ ngx_load_module(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
  }
  
  
@@ -87,27 +88,70 @@ index aa4986b..038881d 100644
 +
 +
 +static char *
-+ngx_set_max_netns(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
++ngx_set_netns_cache(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 +{
++    time_t               netns_inactive;
 +    ngx_int_t            netns_max;
-+    ngx_str_t           *value;
++    ngx_str_t           *value, s;
++    ngx_uint_t           i;
 +    ngx_cycle_t         *cycle;
 +    ngx_pool_cleanup_t  *clean;
 +
 +    cycle = cf->cycle;
 +
++    netns_inactive = 0;
 +    netns_max = cycle->netns.max;
 +    if (netns_max > 0) {
 +        return "is duplicate";
 +    }
 +
 +    value = cf->args->elts;
-+    netns_max = ngx_atoi(value[1].data, value[1].len);
-+    if (netns_max == NGX_ERROR || netns_max == 0) {
-+        return "invalid number";
++    for (i = 1; i < cf->args->nelts; i++) {
++        if (ngx_strncmp(value[i].data, "max=", 4) == 0) {
++            netns_max = ngx_atoi(value[i].data + 4, value[i].len - 4);
++
++            if (netns_max <= 0) {
++                goto failed;
++            }
++
++            continue;
++        }
++
++        /* TODO: network namespace inactive */
++        if (ngx_strncmp(value[i].data, "inactive=", 9) == 0) {
++            s.len = value[i].len - 9;
++            s.data = value[i].data + 9;
++
++            netns_inactive = ngx_parse_time(&s, 1);
++            if (netns_inactive == (time_t) NGX_ERROR) {
++                goto failed;
++            }
++
++            ngx_conf_log_error(NGX_LOG_ALERT, cf, 0,
++                               "parameter \"inactive\" not supported yet");
++            goto failed;
++        }
++
++        if (ngx_strcmp(value[i].data, "off") == 0) {
++            netns_max = 0;
++
++            continue;
++        }
++
++    failed:
++
++        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
++                           "invalid \"network_namespace_cache\" parameter \"%V\"",
++                           &value[i]);
++        return NGX_CONF_ERROR;
 +    }
 +
 +    cycle->netns.max = netns_max;
++    cycle->netns.inactive = netns_inactive;
++
++    if (netns_max == 0) {
++        return NGX_CONF_OK;
++    }
 +
 +    clean = ngx_pool_cleanup_add(cycle->pool, 0);
 +    if (clean == NULL) {
@@ -133,7 +177,7 @@ index aa4986b..038881d 100644
  
  static void
 diff --git a/src/core/ngx_connection.c b/src/core/ngx_connection.c
-index 9a74758..06caa3e 100644
+index 9a747589..06caa3e4 100644
 --- a/src/core/ngx_connection.c
 +++ b/src/core/ngx_connection.c
 @@ -87,6 +87,10 @@ ngx_create_listening(ngx_conf_t *cf, struct sockaddr *sockaddr,
@@ -244,7 +288,7 @@ index 9a74758..06caa3e 100644
              if (s == (ngx_socket_t) -1) {
                  ngx_log_error(NGX_LOG_EMERG, log, ngx_socket_errno,
 diff --git a/src/core/ngx_connection.h b/src/core/ngx_connection.h
-index e4dfe58..2bce219 100644
+index e4dfe587..2bce219d 100644
 --- a/src/core/ngx_connection.h
 +++ b/src/core/ngx_connection.h
 @@ -18,6 +18,11 @@ typedef struct ngx_listening_s  ngx_listening_t;
@@ -271,7 +315,7 @@ index e4dfe58..2bce219 100644
  
      ngx_recv_pt         recv;
 diff --git a/src/core/ngx_cycle.c b/src/core/ngx_cycle.c
-index 675a506..b12b474 100644
+index 675a5061..38442ffe 100644
 --- a/src/core/ngx_cycle.c
 +++ b/src/core/ngx_cycle.c
 @@ -9,6 +9,10 @@
@@ -407,7 +451,7 @@ index 675a506..b12b474 100644
 +    cycle = (ngx_cycle_t *) ngx_cycle;
 +
 +    if (cycle->netns.max == 0) {
-+        p = ngx_snprintf(err, *errlen, "directive \"max_network_namespaces\" "
++        p = ngx_snprintf(err, *errlen, "directive \"network_namespace_cache\" "
 +                         "is missing in nginx.conf");
 +        *errlen = p - err;
 +
@@ -554,11 +598,11 @@ index 675a506..b12b474 100644
 +
 +#endif
 diff --git a/src/core/ngx_cycle.h b/src/core/ngx_cycle.h
-index c342365..5774b14 100644
+index 2b48ccbd..bcf1b889 100644
 --- a/src/core/ngx_cycle.h
 +++ b/src/core/ngx_cycle.h
-@@ -28,6 +28,17 @@
- #define HAVE_INTERCEPT_ERROR_LOG_PATCH
+@@ -22,6 +22,17 @@
+ #define NGX_DEBUG_POINTS_ABORT  2
  
  
 +#if (NGX_HAVE_NET_NS)
@@ -575,7 +619,7 @@ index c342365..5774b14 100644
  typedef struct ngx_shm_zone_s  ngx_shm_zone_t;
  
  typedef ngx_int_t (*ngx_shm_zone_init_pt) (ngx_shm_zone_t *zone, void *data);
-@@ -43,7 +54,34 @@ struct ngx_shm_zone_s {
+@@ -35,7 +46,35 @@ struct ngx_shm_zone_s {
  };
  
  
@@ -585,6 +629,7 @@ index c342365..5774b14 100644
 +    ngx_rbtree_t              lru_rbtree;
 +    ngx_queue_t               lru_queue;
 +    ngx_int_t                 max;
++    time_t                    inactive;
 +    ngx_int_t                 count;
 +    ngx_file_uniq_t           default_netns_uniq;
 +    ngx_fd_t                  default_netns_fd;
@@ -610,7 +655,7 @@ index c342365..5774b14 100644
      void                  ****conf_ctx;
      ngx_pool_t               *pool;
  
-@@ -144,6 +182,11 @@ ngx_cpuset_t *ngx_get_cpu_affinity(ngx_uint_t n);
+@@ -131,6 +170,11 @@ ngx_cpuset_t *ngx_get_cpu_affinity(ngx_uint_t n);
  ngx_shm_zone_t *ngx_shared_memory_add(ngx_conf_t *cf, ngx_str_t *name,
      size_t size, void *tag);
  void ngx_set_shutdown_timer(ngx_cycle_t *cycle);
@@ -623,7 +668,7 @@ index c342365..5774b14 100644
  
  extern volatile ngx_cycle_t  *ngx_cycle;
 diff --git a/src/event/ngx_event_accept.c b/src/event/ngx_event_accept.c
-index 7756370..060081a 100644
+index 77563709..060081aa 100644
 --- a/src/event/ngx_event_accept.c
 +++ b/src/event/ngx_event_accept.c
 @@ -220,6 +220,10 @@ ngx_event_accept(ngx_event_t *ev)
@@ -638,7 +683,7 @@ index 7756370..060081a 100644
          if (c->sockaddr->sa_family == AF_UNIX) {
              c->tcp_nopush = NGX_TCP_NOPUSH_DISABLED;
 diff --git a/src/event/ngx_event_connect.c b/src/event/ngx_event_connect.c
-index c5bb806..5ced436 100644
+index c5bb8068..5ced436d 100644
 --- a/src/event/ngx_event_connect.c
 +++ b/src/event/ngx_event_connect.c
 @@ -38,7 +38,32 @@ ngx_event_connect_peer(ngx_peer_connection_t *pc)
@@ -691,7 +736,7 @@ index c5bb806..5ced436 100644
  
      if (ngx_add_conn) {
 diff --git a/src/event/ngx_event_connect.h b/src/event/ngx_event_connect.h
-index 72d21d7..4f814fe 100644
+index 72d21d7f..4f814fe5 100644
 --- a/src/event/ngx_event_connect.h
 +++ b/src/event/ngx_event_connect.h
 @@ -55,6 +55,11 @@ struct ngx_peer_connection_s {
@@ -707,7 +752,7 @@ index 72d21d7..4f814fe 100644
      int                              rcvbuf;
  
 diff --git a/src/event/ngx_event_openssl_stapling.c b/src/event/ngx_event_openssl_stapling.c
-index 0bea5e7..25a0282 100644
+index 0bea5e74..25a02825 100644
 --- a/src/event/ngx_event_openssl_stapling.c
 +++ b/src/event/ngx_event_openssl_stapling.c
 @@ -1034,6 +1034,11 @@ ngx_ssl_ocsp_connect(ngx_ssl_ocsp_ctx_t *ctx)
@@ -723,7 +768,7 @@ index 0bea5e7..25a0282 100644
  
      ngx_log_debug0(NGX_LOG_DEBUG_EVENT, ctx->log, 0,
 diff --git a/src/http/modules/ngx_http_upstream_keepalive_module.c b/src/http/modules/ngx_http_upstream_keepalive_module.c
-index 0048e6b..02b5d05 100644
+index 0048e6bc..02b5d05a 100644
 --- a/src/http/modules/ngx_http_upstream_keepalive_module.c
 +++ b/src/http/modules/ngx_http_upstream_keepalive_module.c
 @@ -240,6 +240,12 @@ ngx_http_upstream_get_keepalive_peer(ngx_peer_connection_t *pc, void *data)
@@ -740,10 +785,10 @@ index 0048e6b..02b5d05 100644
              ngx_queue_insert_head(&kp->conf->free, q);
  
 diff --git a/src/http/ngx_http.c b/src/http/ngx_http.c
-index 288d591..a5700ec 100644
+index 9d8b6d79..541a95eb 100644
 --- a/src/http/ngx_http.c
 +++ b/src/http/ngx_http.c
-@@ -1167,7 +1167,13 @@ ngx_http_add_listen(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
+@@ -1163,7 +1163,13 @@ ngx_http_add_listen(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
      port = cmcf->ports->elts;
      for (i = 0; i < cmcf->ports->nelts; i++) {
  
@@ -758,7 +803,7 @@ index 288d591..a5700ec 100644
              continue;
          }
  
-@@ -1183,6 +1189,10 @@ ngx_http_add_listen(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
+@@ -1179,6 +1185,10 @@ ngx_http_add_listen(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
          return NGX_ERROR;
      }
  
@@ -769,7 +814,7 @@ index 288d591..a5700ec 100644
      port->family = sa->sa_family;
      port->port = p;
      port->addrs.elts = NULL;
-@@ -1776,6 +1786,10 @@ ngx_http_add_listening(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
+@@ -1772,6 +1782,10 @@ ngx_http_add_listening(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
      ls->reuseport = addr->opt.reuseport;
  #endif
  
@@ -781,10 +826,10 @@ index 288d591..a5700ec 100644
  }
  
 diff --git a/src/http/ngx_http_core_module.c b/src/http/ngx_http_core_module.c
-index 8e5a3db..6295e65 100644
+index 57a47427..8e6efcc9 100644
 --- a/src/http/ngx_http_core_module.c
 +++ b/src/http/ngx_http_core_module.c
-@@ -3775,6 +3775,10 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+@@ -3762,6 +3762,10 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
      lsopt.ipv6only = 1;
  #endif
  
@@ -795,7 +840,7 @@ index 8e5a3db..6295e65 100644
      (void) ngx_sock_ntop(&lsopt.sockaddr.sockaddr, lsopt.socklen, lsopt.addr,
                           NGX_SOCKADDR_STRLEN, 1);
  
-@@ -4080,6 +4084,39 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+@@ -4067,6 +4071,39 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
              continue;
          }
  
@@ -803,7 +848,7 @@ index 8e5a3db..6295e65 100644
 +        if (ngx_strncmp(value[n].data, "netns=", 6) == 0) {
 +            if (cf->cycle->netns.max == 0) {
 +                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-+                                   "directive \"max_network_namespaces\" "
++                                   "directive \"network_namespace_cache\" "
 +                                   "is missing");
 +
 +                return NGX_CONF_ERROR;
@@ -836,7 +881,7 @@ index 8e5a3db..6295e65 100644
                             "invalid parameter \"%V\"", &value[n]);
          return NGX_CONF_ERROR;
 diff --git a/src/http/ngx_http_core_module.h b/src/http/ngx_http_core_module.h
-index a6128b5..58d4356 100644
+index a6128b54..58d43566 100644
 --- a/src/http/ngx_http_core_module.h
 +++ b/src/http/ngx_http_core_module.h
 @@ -97,6 +97,10 @@ typedef struct {
@@ -862,7 +907,7 @@ index a6128b5..58d4356 100644
      in_port_t                  port;
      ngx_array_t                addrs;     /* array of ngx_http_conf_addr_t */
 diff --git a/src/http/ngx_http_upstream.c b/src/http/ngx_http_upstream.c
-index 2d14067..a30ebb5 100644
+index 2ea521b0..61818e58 100644
 --- a/src/http/ngx_http_upstream.c
 +++ b/src/http/ngx_http_upstream.c
 @@ -487,6 +487,11 @@ ngx_http_upstream_create(ngx_http_request_t *r)
@@ -878,7 +923,7 @@ index 2d14067..a30ebb5 100644
      r->cache = NULL;
  #endif
 diff --git a/src/mail/ngx_mail_auth_http_module.c b/src/mail/ngx_mail_auth_http_module.c
-index 6b57358..713c02d 100644
+index 6b57358b..713c02dd 100644
 --- a/src/mail/ngx_mail_auth_http_module.c
 +++ b/src/mail/ngx_mail_auth_http_module.c
 @@ -201,6 +201,11 @@ ngx_mail_auth_http_init(ngx_mail_session_t *s)
@@ -894,7 +939,7 @@ index 6b57358..713c02d 100644
  
      if (rc == NGX_ERROR || rc == NGX_BUSY || rc == NGX_DECLINED) {
 diff --git a/src/mail/ngx_mail_proxy_module.c b/src/mail/ngx_mail_proxy_module.c
-index 007284b..ea2cb16 100644
+index 007284b6..ea2cb164 100644
 --- a/src/mail/ngx_mail_proxy_module.c
 +++ b/src/mail/ngx_mail_proxy_module.c
 @@ -135,6 +135,11 @@ ngx_mail_proxy_init(ngx_mail_session_t *s, ngx_addr_t *peer)
@@ -910,7 +955,7 @@ index 007284b..ea2cb16 100644
  
      if (rc == NGX_ERROR || rc == NGX_BUSY || rc == NGX_DECLINED) {
 diff --git a/src/stream/ngx_stream.c b/src/stream/ngx_stream.c
-index 0efbda8..6174202 100644
+index 0efbda89..6174202a 100644
 --- a/src/stream/ngx_stream.c
 +++ b/src/stream/ngx_stream.c
 @@ -395,7 +395,12 @@ ngx_stream_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
@@ -949,7 +994,7 @@ index 0efbda8..6174202 100644
              if (stport == NULL) {
                  return NGX_CONF_ERROR;
 diff --git a/src/stream/ngx_stream.h b/src/stream/ngx_stream.h
-index 8bf227c..517595f 100644
+index 09d24593..99c3054f 100644
 --- a/src/stream/ngx_stream.h
 +++ b/src/stream/ngx_stream.h
 @@ -47,6 +47,10 @@ typedef struct {
@@ -975,7 +1020,7 @@ index 8bf227c..517595f 100644
      int                            type;
      in_port_t                      port;
 diff --git a/src/stream/ngx_stream_core_module.c b/src/stream/ngx_stream_core_module.c
-index 272708d..c16de47 100644
+index 272708d6..31705e17 100644
 --- a/src/stream/ngx_stream_core_module.c
 +++ b/src/stream/ngx_stream_core_module.c
 @@ -617,6 +617,10 @@ ngx_stream_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -997,7 +1042,7 @@ index 272708d..c16de47 100644
 +        if (ngx_strncmp(value[i].data, "netns=", 6) == 0) {
 +            if (cf->cycle->netns.max == 0) {
 +                ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-+                                   "directive \"max_network_namespaces\" "
++                                   "directive \"network_namespace_cache\" "
 +                                   "is missing");
 +
 +                return NGX_CONF_ERROR;
@@ -1043,10 +1088,10 @@ index 272708d..c16de47 100644
                             "duplicate \"%V\" address and port pair", &u.url);
          return NGX_CONF_ERROR;
 diff --git a/src/stream/ngx_stream_proxy_module.c b/src/stream/ngx_stream_proxy_module.c
-index 2ad1c8a..4c0ff1d 100644
+index 9d4b075f..16c3a61b 100644
 --- a/src/stream/ngx_stream_proxy_module.c
 +++ b/src/stream/ngx_stream_proxy_module.c
-@@ -392,6 +392,11 @@ ngx_stream_proxy_handler(ngx_stream_session_t *s)
+@@ -380,6 +380,11 @@ ngx_stream_proxy_handler(ngx_stream_session_t *s)
      u->peer.log = c->log;
      u->peer.log_error = NGX_ERROR_ERR;
  
