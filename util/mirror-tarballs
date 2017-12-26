@@ -781,7 +781,7 @@ cd ..
 
 #################################
 
-ver=0.01rc7
+ver=0.01rc8
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-lmdb/tarball/v$ver" -O "lua-resty-lmdb-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-lmdb-$ver.tar.gz || exit 1
 mv orinc-lua-resty-lmdb-* lua-resty-lmdb-$ver || exit 1
