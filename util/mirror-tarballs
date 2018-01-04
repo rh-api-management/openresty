@@ -725,7 +725,7 @@ mv openresty-opm-* opm-$ver || exit 1
 
 #################################
 
-ver=2.1-20171224
+ver=2.1-20180104
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/luajit2-plus/tarball/plus-v$ver" -O "LuaJIT-plus-$ver.tar.gz" || exit 1
 tar -xzf LuaJIT-plus-$ver.tar.gz || exit 1
 mv orinc-luajit2-plus-* LuaJIT-plus-$ver || exit 1
