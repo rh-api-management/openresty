@@ -817,7 +817,7 @@ cd ..
 
 #################################
 
-ver=0.01rc6
+ver=0.01rc7
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-ssl/tarball/v$ver" -O "lua-resty-ssl-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-ssl-$ver.tar.gz || exit 1
 mv orinc-lua-resty-ssl-* lua-resty-ssl-$ver || exit 1
