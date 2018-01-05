@@ -245,6 +245,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_logger_socket') {
         $resty_opts{no_lua_resty_logger_socket} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_domain_suffix') {
+        $resty_opts{no_lua_resty_domain_suffix} = 1;
+
     } elsif ($opt eq '--without-lua_resty_pgutils') {
         $resty_opts{no_lua_resty_pgutils} = 1;
 
@@ -1216,7 +1219,7 @@ _EOC_
                 "\$(MAKE) install$extra_opts";
         }
 
-        for my $tag (qw/lmdb balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs/) {
+        for my $tag (qw/lmdb balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs domain-suffix/) {
             my $no_flag = "no_lua_resty_$tag";
             my $pkg_prefix = "lua-resty-$tag";
             if ($tag eq 'edge-pki') {
@@ -1517,6 +1520,7 @@ _EOC_
   --without-lua_resty_request_id     disable the lua-resty-request-id library
   --without-lua_gd                   disable the lua-gd library
   --without-lua_captcha              disable the lua-captcha library
+  --without-lua_resty_domain_suffix  disable the lua-resty-domain-suffix library
 
   --with-luajit                      enable and build the bundled LuaJIT 2.1 (the default)
   --with-luajit=DIR                  use the external LuaJIT 2.1 installation specified by DIR

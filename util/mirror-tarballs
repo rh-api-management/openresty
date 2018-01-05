@@ -434,6 +434,15 @@ sed $"s/NGINX_VERSION \".unknown/NGINX_VERSION \".$minor_ver/" \
     || exit 1
 rm -rf no-pool-nginx-$ver
 
+downlod_priv_tar() {
+    local name=$1
+    local version=$2
+
+    "$root"/util/get-priv-tarball "https://api.github.com/repos/orinc/$name/tarball/v$version" -O "$name-$version.tar.gz" || exit 1
+     tar -xzf "$name-$version.tar.gz" || exit 1
+     mv orinc-"$name"-* "$name-$version" || exit 1
+}
+
 #################################
 
 ver=0.61
@@ -856,6 +865,10 @@ mv orinc-lua-resty-logger-socket-* lua-resty-logger-socket-$ver || exit 1
 
 #################################
 
+downlod_priv_tar lua-resty-domain-suffix 0.01rc3
+
+#################################
+
 ver=0.01rc4
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-pgutils/tarball/v$ver" -O "lua-resty-pgutils-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-pgutils-$ver.tar.gz || exit 1
@@ -1184,14 +1197,8 @@ mv orinc-lua-resty-request-id-* lua-resty-request-id-$ver || exit 1
 
 #################################
 
-downlod_orinc_tar() {
-    "$root"/util/get-priv-tarball "https://api.github.com/repos/orinc/$1/tarball/v$2" -O "$1-$2.tar.gz" || exit 1
-    tar -xzf "$1-$2.tar.gz" || exit 1
-    mv orinc-"$1"-* "$1-$2" || exit 1
-}
-
-downlod_orinc_tar lua-resty-sysstat 0.01rc1
-downlod_orinc_tar lua-resty-fs 0.01rc1
+downlod_priv_tar lua-resty-sysstat 0.01rc1
+downlod_priv_tar lua-resty-fs 0.01rc1
 
 #################################
 
