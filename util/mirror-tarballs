@@ -843,7 +843,7 @@ mv orinc-lua-resty-errlog-dedup-* lua-resty-errlog-dedup-$ver || exit 1
 
 #################################
 
-ver=0.01rc8
+ver=0.01rc9
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/edge-pki/tarball/v$ver" -O "edge-pki-$ver.tar.gz" || exit 1
 tar -xzf edge-pki-$ver.tar.gz || exit 1
 mv orinc-edge-pki-* edge-pki-$ver || exit 1
