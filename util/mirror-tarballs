@@ -837,6 +837,13 @@ cd ..
 
 #################################
 
+ver=0.10rc2
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-logger-socket/tarball/v$ver" -O "lua-resty-logger-socket-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-logger-socket-$ver.tar.gz || exit 1
+mv orinc-lua-resty-logger-socket-* lua-resty-logger-socket-$ver || exit 1
+
+#################################
+
 ver=0.01rc3
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-pgutils/tarball/v$ver" -O "lua-resty-pgutils-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-pgutils-$ver.tar.gz || exit 1
