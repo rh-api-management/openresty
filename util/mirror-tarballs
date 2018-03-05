@@ -1172,6 +1172,16 @@ mv orinc-lua-resty-request-id-* lua-resty-request-id-$ver || exit 1
 
 #################################
 
+downlod_orinc_tar() {
+    "$root"/util/get-priv-tarball "https://api.github.com/repos/orinc/$1/tarball/v$2" -O "$1-$2.tar.gz" || exit 1
+    tar -xzf "$1-$2.tar.gz" || exit 1
+    mv orinc-"$1"-* "$1-$2" || exit 1
+}
+
+downlod_orinc_tar lua-resty-sysstat 0.01rc1
+
+#################################
+
 rm *.tar.gz
 
 cd ..
