@@ -1179,6 +1179,7 @@ downlod_orinc_tar() {
 }
 
 downlod_orinc_tar lua-resty-sysstat 0.01rc1
+downlod_orinc_tar lua-resty-fs 0.01rc1
 
 #################################
 
