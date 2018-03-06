@@ -1,5 +1,4 @@
 diff --git a/auto/unix b/auto/unix
-index 10835f6c..05b355e6 100644
 --- a/auto/unix
 +++ b/auto/unix
 @@ -990,3 +990,19 @@ ngx_feature_test='struct addrinfo *res;
@@ -23,7 +22,6 @@ index 10835f6c..05b355e6 100644
 +                  close(fd)"
 +. auto/feature
 diff --git a/src/core/nginx.c b/src/core/nginx.c
-index c3a29cc4..de5e20b8 100644
 --- a/src/core/nginx.c
 +++ b/src/core/nginx.c
 @@ -25,6 +25,10 @@ static char *ngx_set_cpu_affinity(ngx_conf_t *cf, ngx_command_t *cmd,
@@ -53,7 +51,110 @@ index c3a29cc4..de5e20b8 100644
      { ngx_string("daemon"),
        NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_FLAG,
        ngx_conf_set_flag_slot,
-@@ -1573,6 +1586,122 @@ ngx_load_module(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+@@ -451,8 +464,14 @@ static ngx_int_t
+ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
+ {
+     u_char           *p, *v, *inherited;
++#if (NGX_HAVE_NET_NS)
++    u_char           *t;
++#endif
+     ngx_int_t         s;
+     ngx_listening_t  *ls;
++#if (NGX_HAVE_NET_NS)
++    ngx_file_uniq_t   netns_uniq;
++#endif
+ 
+     inherited = (u_char *) getenv(NGINX_VAR);
+ 
+@@ -472,7 +491,20 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
+ 
+     for (p = inherited, v = p; *p; p++) {
+         if (*p == ':' || *p == ';') {
++#if (NGX_HAVE_NET_NS)
++            t = ngx_strlchr(v, p, '#');
++            if (t == NULL) {
++                ngx_log_error(NGX_LOG_EMERG, cycle->log, 0,
++                              "missing '#' \"%s\" in " NGINX_VAR
++                              " environment variable, ignoring"
++                              " the rest of the variable", v);
++                break;
++            }
++
++            s = ngx_atoi(v, t - v);
++#else
+             s = ngx_atoi(v, p - v);
++#endif
+             if (s == NGX_ERROR) {
+                 ngx_log_error(NGX_LOG_EMERG, cycle->log, 0,
+                               "invalid socket number \"%s\" in " NGINX_VAR
+@@ -481,6 +513,28 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
+                 break;
+             }
+ 
++#if (NGX_HAVE_NET_NS)
++            v = t + 1;
++            if (v == p) {
++                ngx_log_error(NGX_LOG_EMERG, cycle->log, 0,
++                              "missing network namespace "
++                              "number \"%s\" in " NGINX_VAR
++                              " environment variable, ignoring the rest"
++                              " of the variable", v);
++                break;
++            }
++
++            errno = 0;
++            netns_uniq = strtoul((const char *) v, (char **) &t, 10);
++            if (v == t || errno != 0) {
++                ngx_log_error(NGX_LOG_EMERG, cycle->log, errno,
++                              "invalid network namespace "
++                              "number \"%s\" in " NGINX_VAR
++                              " environment variable, ignoring the rest"
++                              " of the variable", v);
++                break;
++            }
++#endif
+             v = p + 1;
+ 
+             ls = ngx_array_push(&cycle->listening);
+@@ -491,6 +545,9 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
+             ngx_memzero(ls, sizeof(ngx_listening_t));
+ 
+             ls->fd = (ngx_socket_t) s;
++#if (NGX_HAVE_NET_NS)
++            ls->netns_uniq = netns_uniq;
++#endif
+         }
+     }
+ 
+@@ -660,6 +717,9 @@ ngx_exec_new_binary(ngx_cycle_t *cycle, char *const *argv)
+     }
+ 
+     var = ngx_alloc(sizeof(NGINX_VAR)
++#if (NGX_HAVE_NET_NS)
++                    + cycle->listening.nelts * (NGX_INT_T_LEN + 1)
++#endif
+                     + cycle->listening.nelts * (NGX_INT32_LEN + 1) + 2,
+                     cycle->log);
+     if (var == NULL) {
+@@ -671,7 +731,17 @@ ngx_exec_new_binary(ngx_cycle_t *cycle, char *const *argv)
+ 
+     ls = cycle->listening.elts;
+     for (i = 0; i < cycle->listening.nelts; i++) {
++#if (NGX_HAVE_NET_NS)
++        /*
++         * TODO: One thing to note here is that the kernel has
++         * a size limit on the system environment values (at
++         * least 32 pages by default). Now we halve the number of
++         * listening socket fds we can store for binary upgrade.
++         */
++        p = ngx_sprintf(p, "%ud#%uL;", ls[i].fd, ls[i].netns_uniq);
++#else
+         p = ngx_sprintf(p, "%ud;", ls[i].fd);
++#endif
+     }
+ 
+     *p = '\0';
+@@ -1573,6 +1643,122 @@ ngx_load_module(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
  }
  
  
@@ -177,7 +278,6 @@ index c3a29cc4..de5e20b8 100644
  
  static void
 diff --git a/src/core/ngx_connection.c b/src/core/ngx_connection.c
-index 9a747589..06caa3e4 100644
 --- a/src/core/ngx_connection.c
 +++ b/src/core/ngx_connection.c
 @@ -87,6 +87,10 @@ ngx_create_listening(ngx_conf_t *cf, struct sockaddr *sockaddr,
@@ -288,7 +388,6 @@ index 9a747589..06caa3e4 100644
              if (s == (ngx_socket_t) -1) {
                  ngx_log_error(NGX_LOG_EMERG, log, ngx_socket_errno,
 diff --git a/src/core/ngx_connection.h b/src/core/ngx_connection.h
-index e4dfe587..2bce219d 100644
 --- a/src/core/ngx_connection.h
 +++ b/src/core/ngx_connection.h
 @@ -18,6 +18,11 @@ typedef struct ngx_listening_s  ngx_listening_t;
@@ -315,7 +414,6 @@ index e4dfe587..2bce219d 100644
  
      ngx_recv_pt         recv;
 diff --git a/src/core/ngx_cycle.c b/src/core/ngx_cycle.c
-index 675a5061..38442ffe 100644
 --- a/src/core/ngx_cycle.c
 +++ b/src/core/ngx_cycle.c
 @@ -9,6 +9,10 @@
@@ -598,7 +696,6 @@ index 675a5061..38442ffe 100644
 +
 +#endif
 diff --git a/src/core/ngx_cycle.h b/src/core/ngx_cycle.h
-index 2b48ccbd..bcf1b889 100644
 --- a/src/core/ngx_cycle.h
 +++ b/src/core/ngx_cycle.h
 @@ -22,6 +22,17 @@
@@ -668,7 +765,6 @@ index 2b48ccbd..bcf1b889 100644
  
  extern volatile ngx_cycle_t  *ngx_cycle;
 diff --git a/src/event/ngx_event_accept.c b/src/event/ngx_event_accept.c
-index 77563709..060081aa 100644
 --- a/src/event/ngx_event_accept.c
 +++ b/src/event/ngx_event_accept.c
 @@ -220,6 +220,10 @@ ngx_event_accept(ngx_event_t *ev)
@@ -683,7 +779,6 @@ index 77563709..060081aa 100644
          if (c->sockaddr->sa_family == AF_UNIX) {
              c->tcp_nopush = NGX_TCP_NOPUSH_DISABLED;
 diff --git a/src/event/ngx_event_connect.c b/src/event/ngx_event_connect.c
-index c5bb8068..5ced436d 100644
 --- a/src/event/ngx_event_connect.c
 +++ b/src/event/ngx_event_connect.c
 @@ -38,7 +38,32 @@ ngx_event_connect_peer(ngx_peer_connection_t *pc)
@@ -736,7 +831,6 @@ index c5bb8068..5ced436d 100644
  
      if (ngx_add_conn) {
 diff --git a/src/event/ngx_event_connect.h b/src/event/ngx_event_connect.h
-index 72d21d7f..4f814fe5 100644
 --- a/src/event/ngx_event_connect.h
 +++ b/src/event/ngx_event_connect.h
 @@ -55,6 +55,11 @@ struct ngx_peer_connection_s {
@@ -752,7 +846,6 @@ index 72d21d7f..4f814fe5 100644
      int                              rcvbuf;
  
 diff --git a/src/event/ngx_event_openssl_stapling.c b/src/event/ngx_event_openssl_stapling.c
-index 0bea5e74..25a02825 100644
 --- a/src/event/ngx_event_openssl_stapling.c
 +++ b/src/event/ngx_event_openssl_stapling.c
 @@ -1034,6 +1034,11 @@ ngx_ssl_ocsp_connect(ngx_ssl_ocsp_ctx_t *ctx)
@@ -768,7 +861,6 @@ index 0bea5e74..25a02825 100644
  
      ngx_log_debug0(NGX_LOG_DEBUG_EVENT, ctx->log, 0,
 diff --git a/src/http/modules/ngx_http_upstream_keepalive_module.c b/src/http/modules/ngx_http_upstream_keepalive_module.c
-index 0048e6bc..02b5d05a 100644
 --- a/src/http/modules/ngx_http_upstream_keepalive_module.c
 +++ b/src/http/modules/ngx_http_upstream_keepalive_module.c
 @@ -240,6 +240,12 @@ ngx_http_upstream_get_keepalive_peer(ngx_peer_connection_t *pc, void *data)
@@ -785,7 +877,6 @@ index 0048e6bc..02b5d05a 100644
              ngx_queue_insert_head(&kp->conf->free, q);
  
 diff --git a/src/http/ngx_http.c b/src/http/ngx_http.c
-index 9d8b6d79..541a95eb 100644
 --- a/src/http/ngx_http.c
 +++ b/src/http/ngx_http.c
 @@ -1163,7 +1163,13 @@ ngx_http_add_listen(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
@@ -826,7 +917,6 @@ index 9d8b6d79..541a95eb 100644
  }
  
 diff --git a/src/http/ngx_http_core_module.c b/src/http/ngx_http_core_module.c
-index 57a47427..8e6efcc9 100644
 --- a/src/http/ngx_http_core_module.c
 +++ b/src/http/ngx_http_core_module.c
 @@ -3762,6 +3762,10 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -881,7 +971,6 @@ index 57a47427..8e6efcc9 100644
                             "invalid parameter \"%V\"", &value[n]);
          return NGX_CONF_ERROR;
 diff --git a/src/http/ngx_http_core_module.h b/src/http/ngx_http_core_module.h
-index a6128b54..58d43566 100644
 --- a/src/http/ngx_http_core_module.h
 +++ b/src/http/ngx_http_core_module.h
 @@ -97,6 +97,10 @@ typedef struct {
@@ -907,7 +996,6 @@ index a6128b54..58d43566 100644
      in_port_t                  port;
      ngx_array_t                addrs;     /* array of ngx_http_conf_addr_t */
 diff --git a/src/http/ngx_http_upstream.c b/src/http/ngx_http_upstream.c
-index 2ea521b0..61818e58 100644
 --- a/src/http/ngx_http_upstream.c
 +++ b/src/http/ngx_http_upstream.c
 @@ -487,6 +487,11 @@ ngx_http_upstream_create(ngx_http_request_t *r)
@@ -923,7 +1011,6 @@ index 2ea521b0..61818e58 100644
      r->cache = NULL;
  #endif
 diff --git a/src/mail/ngx_mail_auth_http_module.c b/src/mail/ngx_mail_auth_http_module.c
-index 6b57358b..713c02dd 100644
 --- a/src/mail/ngx_mail_auth_http_module.c
 +++ b/src/mail/ngx_mail_auth_http_module.c
 @@ -201,6 +201,11 @@ ngx_mail_auth_http_init(ngx_mail_session_t *s)
@@ -939,7 +1026,6 @@ index 6b57358b..713c02dd 100644
  
      if (rc == NGX_ERROR || rc == NGX_BUSY || rc == NGX_DECLINED) {
 diff --git a/src/mail/ngx_mail_proxy_module.c b/src/mail/ngx_mail_proxy_module.c
-index 007284b6..ea2cb164 100644
 --- a/src/mail/ngx_mail_proxy_module.c
 +++ b/src/mail/ngx_mail_proxy_module.c
 @@ -135,6 +135,11 @@ ngx_mail_proxy_init(ngx_mail_session_t *s, ngx_addr_t *peer)
@@ -955,7 +1041,6 @@ index 007284b6..ea2cb164 100644
  
      if (rc == NGX_ERROR || rc == NGX_BUSY || rc == NGX_DECLINED) {
 diff --git a/src/stream/ngx_stream.c b/src/stream/ngx_stream.c
-index 0efbda89..6174202a 100644
 --- a/src/stream/ngx_stream.c
 +++ b/src/stream/ngx_stream.c
 @@ -395,7 +395,12 @@ ngx_stream_add_ports(ngx_conf_t *cf, ngx_array_t *ports,
@@ -994,7 +1079,6 @@ index 0efbda89..6174202a 100644
              if (stport == NULL) {
                  return NGX_CONF_ERROR;
 diff --git a/src/stream/ngx_stream.h b/src/stream/ngx_stream.h
-index 09d24593..99c3054f 100644
 --- a/src/stream/ngx_stream.h
 +++ b/src/stream/ngx_stream.h
 @@ -47,6 +47,10 @@ typedef struct {
@@ -1020,7 +1104,6 @@ index 09d24593..99c3054f 100644
      int                            type;
      in_port_t                      port;
 diff --git a/src/stream/ngx_stream_core_module.c b/src/stream/ngx_stream_core_module.c
-index 272708d6..31705e17 100644
 --- a/src/stream/ngx_stream_core_module.c
 +++ b/src/stream/ngx_stream_core_module.c
 @@ -617,6 +617,10 @@ ngx_stream_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
@@ -1088,7 +1171,6 @@ index 272708d6..31705e17 100644
                             "duplicate \"%V\" address and port pair", &u.url);
          return NGX_CONF_ERROR;
 diff --git a/src/stream/ngx_stream_proxy_module.c b/src/stream/ngx_stream_proxy_module.c
-index 9d4b075f..16c3a61b 100644
 --- a/src/stream/ngx_stream_proxy_module.c
 +++ b/src/stream/ngx_stream_proxy_module.c
 @@ -380,6 +380,11 @@ ngx_stream_proxy_handler(ngx_stream_session_t *s)
