@@ -212,6 +212,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-edge_message_bus') {
         $resty_opts{no_edge_message_bus} = 1;
 
+    } elsif ($opt eq '--without-edge_routing_platform') {
+        $resty_opts{no_edge_routing_platform} = 1;
+
     } elsif ($opt eq '--without-edge_pki') {
         $resty_opts{no_edge_pki} = 1;
 
@@ -1277,7 +1280,7 @@ _EOC_
             }
         }
 
-        for my $name (qw/edge-message-bus lua-tablepool pgmoon lua-conf-nginx-module lua-captcha/) {
+        for my $name (qw/edge-message-bus edge-routing-platform lua-tablepool pgmoon lua-conf-nginx-module lua-captcha/) {
             (my $tag = $name) =~ s/-/_/g;
             unless ($opts->{"no_$tag"}) {
                 my $dir = auto_complete $name;
@@ -1471,6 +1474,7 @@ _EOC_
   --without-lua_resty_balancer       disable the lua-resty-balancer library
   --without-lua_resty_upstream       disable the lua-resty-upstream library
   --without-edge_message_bus         disable the edge-message-bus Lua library
+  --without-edge_routing_platform    disable the edge-routing-platform Lua library
   --without-edge_pki                 disable the edge-pki Lua library
   --without-lua_resty_ssl            disable the lua-resty-ssl library
   --without-lua_resty_logger_socket  disable the lua-resty-logger-socket library
