@@ -1202,7 +1202,7 @@ mv orinc-lua-resty-request-id-* lua-resty-request-id-$ver || exit 1
 #################################
 
 downlod_priv_tar lua-resty-sysstat 0.02rc1
-downlod_priv_tar lua-resty-fs 0.02rc1
+downlod_priv_tar lua-resty-fs 0.02rc2
 
 #################################
 
