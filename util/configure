@@ -463,7 +463,7 @@ push @make_install_cmds,
 
 if ($platform ne 'msys') {
     push @make_install_cmds,
-        "ln -sf $ngx_sbin \$(DESTDIR)$prefix/bin/openresty";
+        "ln -sf $ngx_sbin \$(DESTDIR)$prefix/bin/openresty-plus";
 }
 
 cd '../..'; # to the root
