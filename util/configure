@@ -88,6 +88,7 @@ my @modules = (
     [stream_lua => 'ngx_stream_lua'],
     [http_lua_ssl => 'ngx_lua_ssl'],
     [http_lua_conf => 'lua-conf-nginx-module'],
+    [lua_config => 'lua-resty-config'],
 );
 
 my $without_resty_mods_regex;
@@ -342,6 +343,9 @@ for my $opt (@ARGV) {
 
     } elsif ($opt eq '--with-luajit') {
         $resty_opts{luajit} = 1;
+
+    } elsif ($opt eq '--without-lmdb') {
+        $resty_opts{no_lmdb} = 1;
 
     } elsif ($opt =~ /^--with-luajit=(.*)/) {
         $resty_opts{luajit_path} = $1;
@@ -1005,6 +1009,62 @@ int main(void) {
         cd '..';
     }
 
+    unless ($opts->{no_lmdb}) {
+        my @dirs = glob "liblmdb-*" or
+            die "No source directory found for liblmdb\n";
+
+        if (@dirs > 1) {
+            die "More than one hits for liblmdb: @dirs\n";
+        }
+
+        my $lmdb_src = $dirs[0] . "/libraries/liblmdb";
+        my $lmdb_prefix = File::Spec->catfile($prefix, "lmdb");
+        my $lmdb_root = File::Spec->rel2abs("lmdb-root");
+
+        if (-d $lmdb_root) {
+            shell "rm -rf $lmdb_root";
+        }
+
+        mkdir $lmdb_root or
+            die "unable to create directory lmdb-root: $!\n";
+
+        cd $lmdb_src;
+
+        my $extra_opts = '';
+
+        if (defined $cc) {
+            $extra_opts .= " CC='$cc'";
+
+        } else {
+            $extra_opts .= " CC=cc";
+        }
+
+        if (defined $cores) {
+            shell "${make} -j$cores$extra_opts", $dry_run;
+        } else {
+            shell "${make}$extra_opts", $dry_run;
+        }
+
+        my ($lib, $inc);
+
+        shell "${make} install$extra_opts prefix=$lmdb_root", $dry_run;
+
+        $lib = File::Spec->catfile($lmdb_root, "lib");
+        $inc = File::Spec->catfile($lmdb_root, "include");
+
+        env LMDB_LIB => $lib;
+        env LMDB_INC => $inc;
+
+        if ($platform ne 'msys') {
+            push @ngx_rpaths, File::Spec->catfile($lmdb_prefix, "lib");
+        }
+
+        push @make_install_cmds, "cd $root_dir/build/$lmdb_src && "
+            . "\$(MAKE) install$extra_opts prefix=$lmdb_prefix";
+
+        cd '../../..';
+    }
+
     if ($opts->{lua} || $opts->{lua_path}
         || $opts->{luajit} || $opts->{luajit_path})
     {
@@ -1249,7 +1309,7 @@ _EOC_
                 "\$(MAKE) install$extra_opts";
         }
 
-        for my $tag (qw/lmdb balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs domain-suffix/) {
+        for my $tag (qw/balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs domain-suffix/) {
             my $no_flag = "no_lua_resty_$tag";
             my $pkg_prefix = "lua-resty-$tag";
             if ($tag eq 'edge-pki') {
@@ -1312,7 +1372,7 @@ _EOC_
                     $extra_opts .= " CC=cc";
                 }
 
-                if ($tag ne 'lmdb' && $platform eq 'macosx') {
+                if ($platform eq 'macosx') {
                     $extra_opts .= " LDFLAGS='-bundle -undefined dynamic_lookup'";
                 }
 
@@ -1324,7 +1384,7 @@ _EOC_
             }
         }
 
-        for my $name (qw/edge-message-bus edge-routing-platform lua-tablepool pgmoon lua-conf-nginx-module lua-captcha/) {
+        for my $name (qw/edge-message-bus edge-routing-platform lua-tablepool pgmoon lua-conf-nginx-module lua-captcha lua-resty-config/) {
             (my $tag = $name) =~ s/-/_/g;
             unless ($opts->{"no_$tag"}) {
                 my $dir = auto_complete $name;
@@ -1591,6 +1651,8 @@ _EOC_
   --with-luajit-xcflags=FLAGS        Specify extra C compiler flags for LuaJIT 2.1
   --without-luajit-lua52             Turns off the LuaJIT extensions from Lua 5.2 that may break
                                      backward compatibility.
+
+  --without-lmdb                     disable the bundled liblmdb library
 
   --with-libdrizzle=DIR              specify the libdrizzle 1.0 (or drizzle) installation prefix
   --with-libpq=DIR                   specify the libpq (or postgresql) installation prefix

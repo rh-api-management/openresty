@@ -537,7 +537,7 @@ mv orinc-lua-resty-zlib-* lua-resty-zlib-$ver || exit 1
 
 #################################
 
-ver=0.01rc16
+ver=0.01rc18
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-conf-nginx-module/tarball/v$ver" -O lua-conf-nginx-module-$ver.tar.gz || exit 1
 tar -xzf lua-conf-nginx-module-$ver.tar.gz || exit 1
 mv orinc-lua-conf-nginx-module-* lua-conf-nginx-module-$ver || exit 1
@@ -584,6 +584,10 @@ echo
 
 echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_conf_set_proxy_request_buffering.patch"
 patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_conf_set_proxy_request_buffering.patch || exit 1
+echo
+
+echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_conf_error_page.patch"
+patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_conf_error_page.patch || exit 1
 echo
 
 cd .. || exit 1
@@ -806,12 +810,11 @@ cd ..
 
 #################################
 
-ver=0.01rc9
-$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-lmdb/tarball/v$ver" -O "lua-resty-lmdb-$ver.tar.gz" || exit 1
-tar -xzf lua-resty-lmdb-$ver.tar.gz || exit 1
-mv orinc-lua-resty-lmdb-* lua-resty-lmdb-$ver || exit 1
-cd lua-resty-lmdb-$ver || exit 1
-#patch -p1 < $root/patches/lua_cjson-$ver-array_detection_fix.patch || exit 1
+ver=0.01rc1
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-config/tarball/v$ver" -O "lua-resty-config-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-config-$ver.tar.gz || exit 1
+mv orinc-lua-resty-config-* lua-resty-config-$ver || exit 1
+cd lua-resty-config-$ver || exit 1
 sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
 mv mk Makefile || exit 1
 cd ..
@@ -1202,6 +1205,13 @@ ver=0.01rc2
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-request-id/tarball/v$ver" -O "lua-resty-request-id-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-request-id-$ver.tar.gz || exit 1
 mv orinc-lua-resty-request-id-* lua-resty-request-id-$ver || exit 1
+
+#################################
+
+ver=LMDB_0.9.21
+$root/util/get-priv-tarball "https://api.github.com/repos/LMDB/lmdb/tarball/$ver" -O "liblmdb-$ver.tar.gz" || exit 1
+tar -xzf liblmdb-$ver.tar.gz || exit 1
+mv LMDB-lmdb-* liblmdb-$ver || exit 1
 
 #################################
 
