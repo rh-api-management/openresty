@@ -884,7 +884,7 @@ mv orinc-lua-resty-pgutils-* lua-resty-pgutils-$ver || exit 1
 
 #################################
 
-ver=0.01rc4
+ver=0.01rc5
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-errlog-dedup/tarball/v$ver" -O "lua-resty-errlog-dedup-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-errlog-dedup-$ver.tar.gz || exit 1
 mv orinc-lua-resty-errlog-dedup-* lua-resty-errlog-dedup-$ver || exit 1
