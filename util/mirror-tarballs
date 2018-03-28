@@ -427,7 +427,7 @@ patch -p1 < $root/patches/nginx-$main_ver-safe_resolver_ipv6_option.patch || exi
 echo
 
 echo "$info_txt applying the socket_cloexec patch for nginx"
-#patch -p1 < $root/patches/nginx-$main_ver-socket_cloexec.patch || exit 1
+patch -p1 < $root/patches/nginx-$main_ver-socket_cloexec.patch || exit 1
 echo
 
 cp $root/html/index.html docs/html/ || exit 1
