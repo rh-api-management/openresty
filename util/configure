@@ -74,6 +74,7 @@ my @modules = (
     [http_drizzle => 'drizzle-nginx-module', 'disabled'],
     [http_postgres => 'ngx_postgres', 'disabled'],
     [http_srcache => 'srcache-nginx-module'],
+    [lua_config => 'lua-resty-config'],
     [http_lua => 'ngx_lua'],
     [http_lua_upstream => 'ngx_lua_upstream'],
     [http_headers_more => 'headers-more-nginx-module'],
@@ -88,7 +89,6 @@ my @modules = (
     [stream_lua => 'ngx_stream_lua'],
     [http_lua_ssl => 'ngx_lua_ssl'],
     [http_lua_conf => 'lua-conf-nginx-module'],
-    [lua_config => 'lua-resty-config'],
 );
 
 my $without_resty_mods_regex;
