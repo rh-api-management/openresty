@@ -509,7 +509,7 @@ mv openresty-drizzle-nginx-module-* drizzle-nginx-module-$ver || exit 1
 
 #################################
 
-ver=0.10.11.8
+ver=0.10.11.9
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-nginx-module-plus/tarball/v$ver" -O lua-nginx-module-$ver.tar.gz || exit 1
 tar -xzf lua-nginx-module-$ver.tar.gz || exit 1
 mv orinc-lua-nginx-module-plus-* ngx_lua-$ver || exit 1
@@ -1137,7 +1137,7 @@ cd ..
 
 #################################
 
-ver=0.1.13.9
+ver=0.1.13.10
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-core-plus/tarball/v$ver" -O "lua-resty-core-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-core-$ver.tar.gz || exit 1
 mv orinc-lua-resty-core-plus-* lua-resty-core-$ver || exit 1
