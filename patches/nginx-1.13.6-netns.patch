@@ -51,7 +51,44 @@ diff --git a/src/core/nginx.c b/src/core/nginx.c
      { ngx_string("daemon"),
        NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_FLAG,
        ngx_conf_set_flag_slot,
-@@ -451,8 +464,14 @@ static ngx_int_t
+@@ -200,6 +213,9 @@ main(int argc, char *const *argv)
+     ngx_cycle_t      *cycle, init_cycle;
+     ngx_conf_dump_t  *cd;
+     ngx_core_conf_t  *ccf;
++#if (NGX_HAVE_NET_NS)
++    ngx_file_info_t   fi;
++#endif
+ 
+     ngx_debug_init();
+ 
+@@ -279,6 +295,26 @@ main(int argc, char *const *argv)
+ 
+     ngx_slab_sizes_init();
+ 
++#if (NGX_HAVE_NET_NS)
++    if (ngx_file_info(NGX_DEFAULT_NETNS_PATH, &fi) == NGX_FILE_ERROR) {
++        ngx_log_stderr(ngx_errno, "failed to stat() file: "
++                       NGX_DEFAULT_NETNS_PATH);
++        return 1;
++    }
++
++    init_cycle.netns.default_netns_fd = ngx_open_file(NGX_DEFAULT_NETNS_PATH,
++                                                      NGX_FILE_RDONLY,
++                                                      0,
++                                                      NGX_FILE_OWNER_ACCESS);
++    if (init_cycle.netns.default_netns_fd == NGX_INVALID_FILE) {
++        ngx_log_stderr(ngx_errno, "failed to open() file: "
++                       NGX_DEFAULT_NETNS_PATH);
++        return 1;
++    }
++
++    init_cycle.netns.default_netns_uniq = ngx_file_uniq(&fi);
++#endif
++
+     if (ngx_add_inherited_sockets(&init_cycle) != NGX_OK) {
+         return 1;
+     }
+@@ -451,8 +487,14 @@ static ngx_int_t
  ngx_add_inherited_sockets(ngx_cycle_t *cycle)
  {
      u_char           *p, *v, *inherited;
@@ -66,57 +103,59 @@ diff --git a/src/core/nginx.c b/src/core/nginx.c
  
      inherited = (u_char *) getenv(NGINX_VAR);
  
-@@ -472,7 +491,20 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
+@@ -472,7 +514,17 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
  
      for (p = inherited, v = p; *p; p++) {
          if (*p == ':' || *p == ';') {
 +#if (NGX_HAVE_NET_NS)
 +            t = ngx_strlchr(v, p, '#');
 +            if (t == NULL) {
-+                ngx_log_error(NGX_LOG_EMERG, cycle->log, 0,
-+                              "missing '#' \"%s\" in " NGINX_VAR
-+                              " environment variable, ignoring"
-+                              " the rest of the variable", v);
-+                break;
-+            }
++                s = ngx_atoi(v, p - v);
 +
-+            s = ngx_atoi(v, t - v);
++            } else {
++                s = ngx_atoi(v, t - v);
++            }
 +#else
              s = ngx_atoi(v, p - v);
 +#endif
              if (s == NGX_ERROR) {
                  ngx_log_error(NGX_LOG_EMERG, cycle->log, 0,
                                "invalid socket number \"%s\" in " NGINX_VAR
-@@ -481,6 +513,28 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
+@@ -481,6 +533,33 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
                  break;
              }
  
 +#if (NGX_HAVE_NET_NS)
-+            v = t + 1;
-+            if (v == p) {
-+                ngx_log_error(NGX_LOG_EMERG, cycle->log, 0,
-+                              "missing network namespace "
-+                              "number \"%s\" in " NGINX_VAR
-+                              " environment variable, ignoring the rest"
-+                              " of the variable", v);
-+                break;
-+            }
++            if (t == NULL) {
++                netns_uniq = cycle->netns.default_netns_uniq;
 +
-+            errno = 0;
-+            netns_uniq = strtoul((const char *) v, (char **) &t, 10);
-+            if (v == t || errno != 0) {
-+                ngx_log_error(NGX_LOG_EMERG, cycle->log, errno,
-+                              "invalid network namespace "
-+                              "number \"%s\" in " NGINX_VAR
-+                              " environment variable, ignoring the rest"
-+                              " of the variable", v);
-+                break;
++            } else {
++                v = t + 1;
++                if (v == p) {
++                    ngx_log_error(NGX_LOG_EMERG, cycle->log, 0,
++                                  "missing network namespace "
++                                  "number \"%s\" in " NGINX_VAR
++                                  " environment variable, ignoring the rest"
++                                  " of the variable", v);
++                    break;
++                }
++
++                errno = 0;
++                netns_uniq = strtoul((const char *) v, (char **) &t, 10);
++                if (v == t || errno != 0) {
++                    ngx_log_error(NGX_LOG_EMERG, cycle->log, errno,
++                                  "invalid network namespace"
++                                  " number \"%s\" in " NGINX_VAR
++                                  " environment variable, ignoring the rest"
++                                  " of the variable", v);
++                    break;
++                }
 +            }
 +#endif
              v = p + 1;
  
              ls = ngx_array_push(&cycle->listening);
-@@ -491,6 +545,9 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
+@@ -491,6 +570,9 @@ ngx_add_inherited_sockets(ngx_cycle_t *cycle)
              ngx_memzero(ls, sizeof(ngx_listening_t));
  
              ls->fd = (ngx_socket_t) s;
@@ -126,7 +165,7 @@ diff --git a/src/core/nginx.c b/src/core/nginx.c
          }
      }
  
-@@ -660,6 +717,9 @@ ngx_exec_new_binary(ngx_cycle_t *cycle, char *const *argv)
+@@ -660,6 +742,9 @@ ngx_exec_new_binary(ngx_cycle_t *cycle, char *const *argv)
      }
  
      var = ngx_alloc(sizeof(NGINX_VAR)
@@ -136,7 +175,7 @@ diff --git a/src/core/nginx.c b/src/core/nginx.c
                      + cycle->listening.nelts * (NGX_INT32_LEN + 1) + 2,
                      cycle->log);
      if (var == NULL) {
-@@ -671,7 +731,17 @@ ngx_exec_new_binary(ngx_cycle_t *cycle, char *const *argv)
+@@ -671,7 +756,17 @@ ngx_exec_new_binary(ngx_cycle_t *cycle, char *const *argv)
  
      ls = cycle->listening.elts;
      for (i = 0; i < cycle->listening.nelts; i++) {
@@ -154,7 +193,7 @@ diff --git a/src/core/nginx.c b/src/core/nginx.c
      }
  
      *p = '\0';
-@@ -1573,6 +1643,122 @@ ngx_load_module(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+@@ -1573,6 +1668,122 @@ ngx_load_module(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
  }
  
  
@@ -427,57 +466,32 @@ diff --git a/src/core/ngx_cycle.c b/src/core/ngx_cycle.c
  
  static void ngx_destroy_cycle_pools(ngx_conf_t *conf);
  static ngx_int_t ngx_init_zone_pool(ngx_cycle_t *cycle,
-@@ -54,6 +58,13 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
+@@ -54,6 +58,12 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
      ngx_core_module_t   *module;
      char                 hostname[NGX_MAXHOSTNAMELEN];
  
 +#if (NGX_HAVE_NET_NS)
 +    u_char               path[NGX_MAX_NETNS_PATH_LEN];
 +    u_char              *p;
-+    ngx_fd_t             netns_fd;
 +    ngx_file_info_t      fi;
 +#endif
 +
      ngx_timezone_update();
  
      /* force localtime update with a new timezone */
-@@ -78,6 +89,35 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
+@@ -78,6 +88,11 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
          return NULL;
      }
  
 +#if (NGX_HAVE_NET_NS)
-+    if (ngx_is_init_cycle(old_cycle)) {
-+        if (ngx_file_info(NGX_DEFAULT_NETNS_PATH, &fi) == NGX_FILE_ERROR) {
-+            ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
-+                          "failed to stat() file: " NGX_DEFAULT_NETNS_PATH);
-+            ngx_destroy_pool(pool);
-+            return NULL;
-+        }
-+
-+        netns_fd = ngx_open_file(NGX_DEFAULT_NETNS_PATH,
-+                                 NGX_FILE_RDONLY,
-+                                 0,
-+                                 NGX_FILE_OWNER_ACCESS);
-+        if (netns_fd == NGX_INVALID_FILE) {
-+            ngx_log_error(NGX_LOG_EMERG, log, ngx_errno,
-+                          "failed to open() file: " NGX_DEFAULT_NETNS_PATH);
-+            ngx_destroy_pool(pool);
-+            return NULL;
-+        }
-+
-+        cycle->netns.default_netns_uniq = ngx_file_uniq(&fi);
-+        cycle->netns.default_netns_fd = netns_fd;
-+
-+    } else {
-+        cycle->netns.default_netns_uniq = old_cycle->netns.default_netns_uniq;
-+        cycle->netns.default_netns_fd = old_cycle->netns.default_netns_fd;
-+    }
++    cycle->netns.default_netns_uniq = old_cycle->netns.default_netns_uniq;
++    cycle->netns.default_netns_fd = old_cycle->netns.default_netns_fd;
 +#endif
 +
      cycle->pool = pool;
      cycle->log = log;
      cycle->old_cycle = old_cycle;
-@@ -517,6 +557,40 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
+@@ -517,6 +532,40 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
                      continue;
                  }
  
@@ -518,7 +532,7 @@ diff --git a/src/core/ngx_cycle.c b/src/core/ngx_cycle.c
                  if (ngx_cmp_sockaddr(nls[n].sockaddr, nls[n].socklen,
                                       ls[i].sockaddr, ls[i].socklen, 1)
                      == NGX_OK)
-@@ -1380,3 +1454,176 @@ ngx_shutdown_timer_handler(ngx_event_t *ev)
+@@ -1380,3 +1429,176 @@ ngx_shutdown_timer_handler(ngx_event_t *ev)
          c[i].read->handler(c[i].read);
      }
  }
