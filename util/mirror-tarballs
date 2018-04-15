@@ -1305,5 +1305,8 @@ find bundle -name '*~' -delete
 
 cd $root || exit 1
 
+rm $restydoc_index || exit 1
+rm $bundle_dir/$resty_cli/bin/restydoc || exit 1
+
 tar cf $name.tar $name || exit 1
 gzip -f --best $name.tar || exit 1
