@@ -1309,7 +1309,7 @@ _EOC_
                 "\$(MAKE) install$extra_opts";
         }
 
-        for my $tag (qw/lmdb balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs domain-suffix/) {
+        for my $tag (qw/balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs domain-suffix/) {
             my $no_flag = "no_lua_resty_$tag";
             my $pkg_prefix = "lua-resty-$tag";
             if ($tag eq 'edge-pki') {
@@ -1372,7 +1372,7 @@ _EOC_
                     $extra_opts .= " CC=cc";
                 }
 
-                if ($tag ne 'lmdb' && $platform eq 'macosx') {
+                if ($platform eq 'macosx') {
                     $extra_opts .= " LDFLAGS='-bundle -undefined dynamic_lookup'";
                 }
 
