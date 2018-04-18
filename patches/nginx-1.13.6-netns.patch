@@ -441,17 +441,17 @@ diff --git a/src/core/ngx_connection.h b/src/core/ngx_connection.h
      struct sockaddr    *sockaddr;
      socklen_t           socklen;    /* size of sockaddr */
      size_t              addr_text_max_len;
-@@ -123,6 +128,10 @@ struct ngx_connection_s {
-     ngx_event_t        *read;
-     ngx_event_t        *write;
+@@ -138,6 +143,10 @@ struct ngx_connection_s {
+ 
+     ngx_pool_t         *pool;
  
 +#if (NGX_HAVE_NET_NS)
 +    ngx_file_uniq_t     netns_uniq;
 +#endif
 +
-     ngx_socket_t        fd;
+     int                 type;
  
-     ngx_recv_pt         recv;
+     struct sockaddr    *sockaddr;
 diff --git a/src/core/ngx_cycle.c b/src/core/ngx_cycle.c
 --- a/src/core/ngx_cycle.c
 +++ b/src/core/ngx_cycle.c
