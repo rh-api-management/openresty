@@ -5,7 +5,7 @@ minor_ver=2rc0
 
 # plus version:
 main_ver=1.13.6
-minor_ver=1.30
+minor_ver=1.31
 
 version=$main_ver.$minor_ver
 echo $version
