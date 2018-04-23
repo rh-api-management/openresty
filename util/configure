@@ -219,6 +219,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-edge_pki') {
         $resty_opts{no_edge_pki} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_config') {
+        $resty_opts{no_lua_resty_config} = 1;
+
     } elsif ($opt eq '--without-lua_tablepool') {
         $resty_opts{no_lua_tablepool} = 1;
 
@@ -1614,6 +1617,7 @@ _EOC_
   --without-edge_message_bus         disable the edge-message-bus Lua library
   --without-edge_routing_platform    disable the edge-routing-platform Lua library
   --without-edge_pki                 disable the edge-pki Lua library
+  --without-lua_resty_config         disable the lua-resty-config library
   --without-lua_resty_fs             disable the lua-resty-fs library
   --without-lua_resty_sysstat        disable the lua-resty-sysstat library
   --without-lua_resty_ssl            disable the lua-resty-ssl library
