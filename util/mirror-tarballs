@@ -554,9 +554,10 @@ echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_proxy_next_upstream.pat
 patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_proxy_next_upstream.patch || exit 1
 echo
 
-echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_conf_proxy_cache.patch"
-patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_conf_proxy_cache.patch || exit 1
-echo
+# 20180522 - superseded by cache index patch
+# echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_conf_proxy_cache.patch"
+# patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_conf_proxy_cache.patch || exit 1
+# echo
 
 echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_conf_set_client_max_body_size.patch"
 patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_conf_set_client_max_body_size.patch || exit 1
@@ -588,6 +589,23 @@ echo
 
 echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_conf_error_page.patch"
 patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_conf_error_page.patch || exit 1
+echo
+
+cd .. || exit 1
+
+#################################
+
+ver=0.01rc1
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/cache-index-nginx-module/tarball/v$ver" -O cache-index-nginx-module-$ver.tar.gz || exit 1
+tar -xzf cache-index-nginx-module-$ver.tar.gz || exit 1
+mv orinc-cache-index-nginx-module-* cache-index-nginx-module-$ver || exit 1
+
+conf_patch_dir="$bundle_dir/cache-index-nginx-module-$ver/patches"
+
+cd nginx-$main_ver || exit 1
+
+echo "$info_txt applying nginx-$main_ver-lua_cache_index.patch"
+patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_cache_index.patch || exit 1
 echo
 
 cd .. || exit 1

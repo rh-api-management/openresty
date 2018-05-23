@@ -89,6 +89,7 @@ my @modules = (
     [stream_lua => 'ngx_stream_lua'],
     [http_lua_ssl => 'ngx_lua_ssl'],
     [http_lua_conf => 'lua-conf-nginx-module'],
+    [http_cache_index => 'cache-index-nginx-module'],
 );
 
 my $without_resty_mods_regex;
@@ -1387,7 +1388,7 @@ _EOC_
             }
         }
 
-        for my $name (qw/edge-message-bus edge-routing-platform lua-tablepool pgmoon lua-conf-nginx-module lua-captcha lua-resty-config/) {
+        for my $name (qw/edge-message-bus edge-routing-platform lua-tablepool pgmoon lua-conf-nginx-module lua-captcha lua-resty-config cache-index-nginx-module/) {
             (my $tag = $name) =~ s/-/_/g;
             unless ($opts->{"no_$tag"}) {
                 my $dir = auto_complete $name;
