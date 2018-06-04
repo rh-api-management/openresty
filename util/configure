@@ -1405,7 +1405,8 @@ _EOC_
         }
 
         for my $key (qw(cookie http ipdatx memcached-shdict shdict-simple ini upstream dns memcached redis mysql string upload websocket
-                        lock lrucache core upstream_healthcheck limit_traffic memcached_server jit_uuid errlog_dedup block_req request_id))
+                        lock lrucache core upstream_healthcheck limit_traffic memcached_server jit_uuid errlog_dedup block_req request_id
+                        signal shell))
         {
             unless ($opts->{"no_lua_resty_$key"}) {
                 (my $key2 = $key) =~ s/_/-/g;
