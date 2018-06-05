@@ -1313,7 +1313,7 @@ _EOC_
                 "\$(MAKE) install$extra_opts";
         }
 
-        for my $tag (qw/balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs domain-suffix/) {
+        for my $tag (qw/balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs domain-suffix signal/) {
             my $no_flag = "no_lua_resty_$tag";
             my $pkg_prefix = "lua-resty-$tag";
             if ($tag eq 'edge-pki') {
@@ -1406,7 +1406,7 @@ _EOC_
 
         for my $key (qw(cookie http ipdatx memcached-shdict shdict-simple ini upstream dns memcached redis mysql string upload websocket
                         lock lrucache core upstream_healthcheck limit_traffic memcached_server jit_uuid errlog_dedup block_req request_id
-                        signal shell))
+                        shell))
         {
             unless ($opts->{"no_lua_resty_$key"}) {
                 (my $key2 = $key) =~ s/_/-/g;

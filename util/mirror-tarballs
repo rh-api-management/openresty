@@ -1237,7 +1237,7 @@ mv orinc-lmdb-* liblmdb-$ver || exit 1
 
 #################################
 
-ver=0.01
+ver=0.02
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-signal/tarball/v$ver" -O "lua-resty-signal-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-signal-$ver.tar.gz || exit 1
 mv orinc-lua-resty-signal-* lua-resty-signal-$ver || exit 1
