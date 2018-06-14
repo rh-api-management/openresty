@@ -73,7 +73,7 @@ index 19fec68..8c2f01a 100644
      /* to test on worker exit */
      unsigned         channel:1;
      unsigned         resolver:1;
-+#if (NGX_HAVE_SOCKET_CLOEXEC)
++#if (HAVE_SOCKET_CLOEXEC_PATCH)
 +    unsigned         skip_socket_leak_check:1;
 +#endif
  
@@ -168,7 +168,7 @@ index c4376a5..48e8fa8 100644
          for (i = 0; i < cycle->connection_n; i++) {
              if (c[i].fd != -1
                  && c[i].read
-+#if (NGX_HAVE_SOCKET_CLOEXEC)
++#if (HAVE_SOCKET_CLOEXEC_PATCH)
 +                && !c[i].read->skip_socket_leak_check
 +#endif
                  && !c[i].read->accept
