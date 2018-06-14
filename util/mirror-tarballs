@@ -1230,7 +1230,7 @@ mv orinc-lua-resty-request-id-* lua-resty-request-id-$ver || exit 1
 
 #################################
 
-ver=1.0.0rc1
+ver=1.0.0rc2
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lmdb/tarball/v$ver" -O "liblmdb-$ver.tar.gz" || exit 1
 tar -xzf liblmdb-$ver.tar.gz || exit 1
 mv orinc-lmdb-* liblmdb-$ver || exit 1
