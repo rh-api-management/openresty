@@ -1002,7 +1002,7 @@ cd ..
 
 #################################
 
-ver=0.02rc1
+ver=0.02rc2
 $root/util/get-tarball "https://github.com/doujiang24/lua-resty-ini/tarball/v$ver" -O "lua-resty-ini-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-ini-$ver.tar.gz || exit 1
 mv doujiang24-lua-resty-ini-* lua-resty-ini-$ver || exit 1
@@ -1014,7 +1014,7 @@ cd ..
 
 #################################
 
-ver=0.02rc7
+ver=0.02rc8
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-balancer/tarball/v$ver" -O "lua-resty-balancer-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-balancer-$ver.tar.gz || exit 1
 mv orinc-lua-resty-balancer-* lua-resty-balancer-$ver || exit 1
