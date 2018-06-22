@@ -1183,7 +1183,7 @@ cd ..
 
 #################################
 
-ver=0.01rc5
+ver=0.01rc6
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-gd/tarball/v$ver" -O "lua-gd-$ver.tar.gz" || exit 1
 tar -xzf lua-gd-$ver.tar.gz || exit 1
 mv orinc-lua-gd-* lua-gd-$ver || exit 1
