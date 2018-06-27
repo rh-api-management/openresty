@@ -1014,6 +1014,17 @@ cd ..
 
 #################################
 
+ver=0.01rc1
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-json-escape/tarball/v$ver" -O "lua-resty-json-escape-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-json-escape-$ver.tar.gz || exit 1
+mv orinc-lua-resty-json-escape-* lua-resty-json-escape-$ver || exit 1
+cd lua-resty-json-escape-$ver || exit 1
+sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
+mv mk Makefile || exit 1
+cd ..
+
+#################################
+
 ver=0.02rc8
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-balancer/tarball/v$ver" -O "lua-resty-balancer-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-balancer-$ver.tar.gz || exit 1
