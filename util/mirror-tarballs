@@ -595,6 +595,10 @@ echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_server_str.patch"
 patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_server_str.patch || exit 1
 echo
 
+echo "$info_txt applying nginx-$main_ver-lua_resty_nginx_conf_set_upstream_intercept_errors.patch"
+patch -p1 < $conf_patch_dir/nginx-$main_ver-lua_resty_nginx_conf_set_upstream_intercept_errors.patch || exit 1
+echo
+
 cd .. || exit 1
 
 #################################
