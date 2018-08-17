@@ -1041,16 +1041,11 @@ cd ..
 
 #################################
 
-ver=0.02rc3
+ver=0.02rc4
 
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-upstream/tarball/v$ver" -O "lua-resty-upstream-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-upstream-$ver.tar.gz || exit 1
 mv orinc-lua-resty-upstream-* lua-resty-upstream-$ver || exit 1
-cd lua-resty-upstream-$ver || exit 1
-#patch -p1 < $root/patches/lua_cjson-$ver-array_detection_fix.patch || exit 1
-sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
-mv mk Makefile || exit 1
-cd ..
 
 #################################
 
