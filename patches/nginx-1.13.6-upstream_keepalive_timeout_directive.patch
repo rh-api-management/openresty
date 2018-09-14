@@ -1,0 +1,87 @@
+commit 7de808990b8e49e2e18c2a013e4cca82a092fdbc
+Author: Maxim Dounin <mdounin@mdounin.ru>
+Date:   Fri Aug 10 21:54:23 2018 +0300
+
+    Upstream keepalive: keepalive_timeout directive.
+    
+    The directive configures maximum time a connection can be kept in the
+    cache.  By configuring a time which is smaller than the corresponding
+    timeout on the backend side one can avoid the race between closing
+    a connection by the backend and nginx trying to use the same connection
+    to send a request at the same time.
+
+diff --git a/src/http/modules/ngx_http_upstream_keepalive_module.c b/src/http/modules/ngx_http_upstream_keepalive_module.c
+--- a/src/http/modules/ngx_http_upstream_keepalive_module.c
++++ b/src/http/modules/ngx_http_upstream_keepalive_module.c
+@@ -12,6 +12,7 @@
+ 
+ typedef struct {
+     ngx_uint_t                         max_cached;
++    ngx_msec_t                         timeout;
+ 
+     ngx_queue_t                        cache;
+     ngx_queue_t                        free;
+@@ -84,6 +85,13 @@ static ngx_command_t  ngx_http_upstream_keepalive_commands[] = {
+       0,
+       NULL },
+ 
++    { ngx_string("keepalive_timeout"),
++      NGX_HTTP_UPS_CONF|NGX_CONF_TAKE1,
++      ngx_conf_set_msec_slot,
++      NGX_HTTP_SRV_CONF_OFFSET,
++      offsetof(ngx_http_upstream_keepalive_srv_conf_t, timeout),
++      NULL },
++
+       ngx_null_command
+ };
+ 
+@@ -133,6 +141,8 @@ ngx_http_upstream_init_keepalive(ngx_conf_t *cf,
+     kcf = ngx_http_conf_upstream_srv_conf(us,
+                                           ngx_http_upstream_keepalive_module);
+ 
++    ngx_conf_init_msec_value(kcf->timeout, 60000);
++
+     if (kcf->original_init_upstream(cf, us) != NGX_OK) {
+         return NGX_ERROR;
+     }
+@@ -267,6 +277,10 @@ found:
+     c->write->log = pc->log;
+     c->pool->log = pc->log;
+ 
++    if (c->read->timer_set) {
++        ngx_del_timer(c->read);
++    }
++
+     pc->connection = c;
+     pc->cached = 1;
+ 
+@@ -345,9 +359,9 @@ ngx_http_upstream_free_keepalive_peer(ngx_peer_connection_t *pc, void *data,
+ 
+     pc->connection = NULL;
+ 
+-    if (c->read->timer_set) {
+-        ngx_del_timer(c->read);
+-    }
++    c->read->delayed = 0;
++    ngx_add_timer(c->read, kp->conf->timeout);
++
+     if (c->write->timer_set) {
+         ngx_del_timer(c->write);
+     }
+@@ -398,7 +412,7 @@ ngx_http_upstream_keepalive_close_handler(ngx_event_t *ev)
+ 
+     c = ev->data;
+ 
+-    if (c->close) {
++    if (c->close || c->read->timedout) {
+         goto close;
+     }
+ 
+@@ -491,6 +505,8 @@ ngx_http_upstream_keepalive_create_conf(ngx_conf_t *cf)
+      *     conf->max_cached = 0;
+      */
+ 
++    conf->timeout = NGX_CONF_UNSET_MSEC;
++
+     return conf;
+ }
