@@ -75,6 +75,7 @@ my @modules = (
     [http_postgres => 'ngx_postgres', 'disabled'],
     [http_srcache => 'srcache-nginx-module'],
     [lua_resty_config => 'lua-resty-config'],
+    [lua_resty_request_id => 'lua-resty-request-id'],
     [http_lua => 'ngx_lua'],
     [http_lua_upstream => 'ngx_lua_upstream'],
     [http_headers_more => 'headers-more-nginx-module'],
@@ -225,6 +226,9 @@ for my $opt (@ARGV) {
 
     } elsif ($opt eq '--without-lua_resty_config') {
         $resty_opts{no_lua_resty_config} = 1;
+
+    } elsif ($opt eq '--without-lua_resty_request_id') {
+        $resty_opts{no_lua_resty_request_id} = 1;
 
     } elsif ($opt eq '--without-lua_tablepool') {
         $resty_opts{no_lua_tablepool} = 1;
@@ -1649,6 +1653,7 @@ _EOC_
   --without-edge_routing_platform    disable the edge-routing-platform Lua library
   --without-edge_pki                 disable the edge-pki Lua library
   --without-lua_resty_config         disable the lua-resty-config library
+  --without-lua_resty_request_id     disable the lua-resty-request-id library
   --without-lua_resty_fs             disable the lua-resty-fs library
   --without-lua_resty_sysstat        disable the lua-resty-sysstat library
   --without-lua_resty_ssl            disable the lua-resty-ssl library
