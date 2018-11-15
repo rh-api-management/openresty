@@ -1053,7 +1053,7 @@ cd ..
 
 #################################
 
-ver=0.02rc4
+ver=0.02rc5
 
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-upstream/tarball/v$ver" -O "lua-resty-upstream-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-upstream-$ver.tar.gz || exit 1
