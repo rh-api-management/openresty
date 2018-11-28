@@ -1276,6 +1276,14 @@ mv orinc-lmdb-* liblmdb-$ver || exit 1
 
 #################################
 
+ver=0.9.27
+$root/util/get-tarball "http://download.savannah.gnu.org/releases/tinycc/tcc-$ver.tar.bz2" -O "libtcc-$ver.tar.bz2" || exit 1
+tar -xjf libtcc-$ver.tar.bz2 || exit 1
+mv tcc-* libtcc-$ver || exit 1
+rm libtcc-$ver.tar.bz2 || exit 1
+
+#################################
+
 ver=0.02
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-signal/tarball/v$ver" -O "lua-resty-signal-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-signal-$ver.tar.gz || exit 1

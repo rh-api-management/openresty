@@ -137,6 +137,7 @@ my $no_luajit_lua52;
 
 my (@ngx_opts, @ngx_cc_opts, @ngx_ld_opts);
 my @user_cc_opts;
+my @clib_ldflags;
 
 push @ngx_opts, "--with-stream";
 
@@ -188,6 +189,9 @@ for my $opt (@ARGV) {
             "because ngx_http_rewrite_module is disabled.\n";
         $resty_opts{no_ndk} = 1;
         push @ngx_opts, $opt;
+
+    } elsif ($opt eq '--without-tcc') {
+        $resty_opts{no_tcc} = 1;
 
     } elsif ($opt eq '--without-lua_cjson') {
         $resty_opts{no_lua_cjson} = 1;
@@ -342,6 +346,9 @@ for my $opt (@ARGV) {
 
     } elsif ($opt =~ /^--with-ld-opt=(.*)/) {
         push @ngx_ld_opts, $1;
+
+    } elsif ($opt =~ /^--with-clib-ldflags=(.+)/) {
+        push @clib_ldflags, $1;
 
     } elsif ($opt =~ $without_resty_mods_regex) {
         #die "no_$1\n";
@@ -1101,6 +1108,52 @@ int main(void) {
         cd '../../..';
     }
 
+    unless ($opts->{no_tcc}) {
+        my @dirs = glob "libtcc-*" or
+            die "No source directory found for libtcc\n";
+
+        if (@dirs > 1) {
+            die "More than one hits for libtcc: @dirs\n";
+        }
+
+        my $tcc_src = $dirs[0];
+        my $tcc_prefix = File::Spec->catfile($prefix, "tcc");
+
+        cd $tcc_src;
+
+        my $extra_opts = "--disable-static";
+
+        if (@user_cc_opts) {
+            my $cc_opts = join ' ', @user_cc_opts;
+            $extra_opts .= ' --extra-cflags="' . $cc_opts . '"';
+        }
+
+        if (@clib_ldflags) {
+            my $ldflags = join ' ', @clib_ldflags;
+            $extra_opts .= ' --extra-ldflags="' . $ldflags . '"';
+        }
+
+        if (defined $cc) {
+            $extra_opts .= " --cc='$cc'";
+
+        } else {
+            $extra_opts .= " --cc=cc";
+        }
+
+        shell "./configure --prefix=$tcc_prefix $extra_opts";
+
+        if (defined $cores) {
+            shell "${make} -j$cores", $dry_run;
+        } else {
+            shell "${make}", $dry_run;
+        }
+
+        push @make_install_cmds, "cd $root_dir/build/$tcc_src && "
+            . "\$(MAKE) install prefix=$tcc_prefix";
+
+        cd '..';
+    }
+
     if ($opts->{lua} || $opts->{lua_path}
         || $opts->{luajit} || $opts->{luajit_path})
     {
@@ -1697,10 +1750,13 @@ _EOC_
                                      backward compatibility.
 
   --without-lmdb                     disable the bundled liblmdb library
+  --without-tcc                      disable the bundled libtcc library
 
   --with-libdrizzle=DIR              specify the libdrizzle 1.0 (or drizzle) installation prefix
   --with-libpq=DIR                   specify the libpq (or postgresql) installation prefix
   --with-pg_config=PATH              specify the path of the pg_config utility
+
+  --with-clib-ldflags                specify the extra ldflags to build libtcc
 
 Options directly inherited from nginx
 
