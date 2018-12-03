@@ -464,6 +464,10 @@ if ($platform ne 'msys') {
     }
 }
 
+if ($platform eq 'macosx') {
+    $resty_opts{no_tcc} = 1;
+}
+
 my $resty_opts = build_resty_opts(\%resty_opts);
 
 if (@ngx_rpaths) {
@@ -1136,20 +1140,22 @@ int main(void) {
             $extra_opts .= ' --extra-ldflags="' . $ldflags . '"';
         }
 
-        if (defined $cc) {
-            $extra_opts .= " --cc='$cc'";
-
-        } else {
-            $extra_opts .= " --cc=cc";
-        }
-
         shell "./configure --prefix=$tcc_prefix $extra_opts";
 
+        my $extra_make_opts = '';
+
         if (defined $cores) {
-            shell "${make} -j$cores", $dry_run;
-        } else {
-            shell "${make}", $dry_run;
+            $extra_make_opts .= "-j${cores}";
         }
+
+        if (defined $cc) {
+            $extra_make_opts .= " CC='$cc'";
+
+        } else {
+            $extra_make_opts .= " CC=cc";
+        }
+
+        shell "${make} $extra_make_opts", $dry_run;
 
         push @make_install_cmds, "cd $root_dir/build/$tcc_src && "
             . "\$(MAKE) install prefix=$tcc_prefix",
