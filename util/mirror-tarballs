@@ -919,6 +919,17 @@ cd ..
 
 #################################
 
+ver=0.01rc1
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-otp/tarball/v$ver" -O "lua-resty-otp-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-otp-$ver.tar.gz || exit 1
+mv orinc-lua-resty-otp-* lua-resty-otp-$ver || exit 1
+cd lua-resty-otp-$ver || exit 1
+sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
+mv mk Makefile || exit 1
+cd ..
+
+#################################
+
 ver=0.01rc10
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-ssl/tarball/v$ver" -O "lua-resty-ssl-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-ssl-$ver.tar.gz || exit 1
