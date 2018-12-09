@@ -1321,6 +1321,7 @@ downlod_priv_tar lua-resty-fs 0.02rc2
 #################################
 
 rm *.tar.gz
+rm *.tar.bz2
 
 cd ..
 cp $root/util/configure ./ || exit 1
