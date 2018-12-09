@@ -1109,11 +1109,11 @@ int main(void) {
     }
 
     unless ($opts->{no_tcc}) {
-        my @dirs = glob "libtcc-*" or
-            die "No source directory found for libtcc\n";
+        my @dirs = glob "tcc-plus-*" or
+            die "No source directory found for tcc\n";
 
         if (@dirs > 1) {
-            die "More than one hits for libtcc: @dirs\n";
+            die "More than one hits for tcc: @dirs\n";
         }
 
         my $tcc_src = $dirs[0];
@@ -1121,7 +1121,7 @@ int main(void) {
 
         cd $tcc_src;
 
-        my $extra_opts = "--disable-static";
+        my $extra_opts = "--disable-static --with-selinux";
 
         if (@user_cc_opts) {
             my $cc_opts = join ' ', @user_cc_opts;
@@ -1149,7 +1149,8 @@ int main(void) {
         }
 
         push @make_install_cmds, "cd $root_dir/build/$tcc_src && "
-            . "\$(MAKE) install prefix=$tcc_prefix";
+            . "\$(MAKE) install prefix=$tcc_prefix",
+            "mkdir -p \$(DESTDIR)$prefix/lualib/ && ln -sf ../tcc/lib/libtcc.so \$(DESTDIR)$prefix/lualib/";
 
         cd '..';
     }

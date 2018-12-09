@@ -34,6 +34,13 @@ cd nginx-$ver || exit 1
 
 # patch the patch
 
+answer=`$root/util/ver-ge "$main_ver" 1.13.7`
+if [ "$answer" = "N" ]; then
+    echo "$info_txt applying the patch for nginx security advisory (CVE-2017-7529)"
+    patch -p1 < $root/patches/nginx-1.13.6-rm_glibc_crypt_r_workaround.patch || exit 1
+    echo
+fi
+
 answer=`$root/util/ver-ge "$main_ver" 1.13.3`
 if [ "$answer" = "N" ]; then
     echo "$info_txt applying the patch for nginx security advisory (CVE-2017-7529)"
@@ -1276,11 +1283,10 @@ mv orinc-lmdb-* liblmdb-$ver || exit 1
 
 #################################
 
-ver=0.9.27
-$root/util/get-tarball "http://download.savannah.gnu.org/releases/tinycc/tcc-$ver.tar.bz2" -O "libtcc-$ver.tar.bz2" || exit 1
-tar -xjf libtcc-$ver.tar.bz2 || exit 1
-mv tcc-* libtcc-$ver || exit 1
-rm libtcc-$ver.tar.bz2 || exit 1
+ver=0.9.27.2
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/tcc-plus/tarball/v$ver" -O "tcc-plus-$ver.tar.gz" || exit 1
+tar -xzf tcc-plus-$ver.tar.gz || exit 1
+mv orinc-tcc-plus-* tcc-plus-$ver || exit 1
 
 #################################
 
