@@ -1315,6 +1315,13 @@ mv orinc-lua-resty-shell-* lua-resty-shell-$ver || exit 1
 
 #################################
 
+ver=0.03
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-triegen/tarball/v$ver" -O "lua-resty-triegen-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-triegen-$ver.tar.gz || exit 1
+mv orinc-lua-resty-triegen-* lua-resty-triegen-$ver || exit 1
+
+#################################
+
 downlod_priv_tar lua-resty-sysstat 0.02rc4
 downlod_priv_tar lua-resty-fs 0.02rc2
 

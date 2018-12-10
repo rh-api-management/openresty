@@ -265,6 +265,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_domain_suffix') {
         $resty_opts{no_lua_resty_domain_suffix} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_triegen') {
+        $resty_opts{no_lua_resty_triegen} = 1;
+
     } elsif ($opt eq '--without-lua_resty_pgutils') {
         $resty_opts{no_lua_resty_pgutils} = 1;
 
@@ -1060,14 +1063,9 @@ int main(void) {
     }
 
     unless ($opts->{no_lmdb}) {
-        my @dirs = glob "liblmdb-*" or
-            die "No source directory found for liblmdb\n";
+        my $dir = auto_complete "liblmdb";
 
-        if (@dirs > 1) {
-            die "More than one hits for liblmdb: @dirs\n";
-        }
-
-        my $lmdb_src = $dirs[0] . "/libraries/liblmdb";
+        my $lmdb_src = $dir . "/libraries/liblmdb";
         my $lmdb_prefix = File::Spec->catfile($prefix, "lmdb");
         my $lmdb_root = File::Spec->rel2abs("lmdb-root");
 
@@ -1116,16 +1114,8 @@ int main(void) {
     }
 
     unless ($opts->{no_tcc}) {
-        my @dirs = glob "tcc-plus-*" or
-            die "No source directory found for tcc\n";
-
-        if (@dirs > 1) {
-            die "More than one hits for tcc: @dirs\n";
-        }
-
-        my $tcc_src = $dirs[0];
+        my $tcc_src = auto_complete "tcc-plus";
         my $tcc_prefix = File::Spec->catfile($prefix, "tcc");
-
         cd $tcc_src;
 
         my $extra_opts = "--disable-static --with-selinux";
@@ -1408,7 +1398,7 @@ _EOC_
                 "\$(MAKE) install$extra_opts";
         }
 
-        for my $tag (qw/json-escape balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs domain-suffix signal/) {
+        for my $tag (qw/json-escape balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs domain-suffix signal triegen/) {
             my $no_flag = "no_lua_resty_$tag";
             my $pkg_prefix = "lua-resty-$tag";
             if ($tag eq 'edge-pki') {
@@ -1445,6 +1435,11 @@ _EOC_
                 my $extra_cflags = '';
                 if (@user_cc_opts) {
                     $extra_cflags = ' ' . join ' ', @user_cc_opts;
+                }
+
+                if ($tag eq 'triegen') {
+                    my $tcc_dir = auto_complete "tcc-plus";
+                    $extra_cflags .= " -I$root_dir/build/$tcc_dir";
                 }
 
                 if ($on_solaris) {
@@ -1753,6 +1748,7 @@ _EOC_
   --without-lua_gd                   disable the lua-gd library
   --without-lua_captcha              disable the lua-captcha library
   --without-lua_resty_domain_suffix  disable the lua-resty-domain-suffix library
+  --without-lua_resty_triegen        disable the lua-resty-triegen library
 
   --with-luajit                      enable and build the bundled LuaJIT 2.1 (the default)
   --with-luajit=DIR                  use the external LuaJIT 2.1 installation specified by DIR
