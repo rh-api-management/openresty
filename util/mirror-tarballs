@@ -931,7 +931,7 @@ cd ..
 
 #################################
 
-ver=0.01rc1
+ver=0.01rc2
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-otp/tarball/v$ver" -O "lua-resty-otp-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-otp-$ver.tar.gz || exit 1
 mv orinc-lua-resty-otp-* lua-resty-otp-$ver || exit 1
