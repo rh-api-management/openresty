@@ -993,7 +993,7 @@ mv orinc-lua-resty-memcached-server-* lua-resty-memcached-server-$ver || exit 1
 
 #################################
 
-ver=1.8.2.3
+ver=1.8.2.4
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/pgmoon/tarball/v$ver" -O "pgmoon-$ver.tar.gz" || exit 1
 tar -xzf pgmoon-$ver.tar.gz || exit 1
 mv orinc-pgmoon-* pgmoon-$ver || exit 1
