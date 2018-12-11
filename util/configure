@@ -286,6 +286,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_ipdatx') {
         $resty_opts{no_lua_resty_ipdatx} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_ipdb') {
+        $resty_opts{no_lua_resty_ipdb} = 1;
+
     } elsif ($opt eq '--without-lua_resty_otp') {
         $resty_opts{no_lua_resty_otp} = 1;
 
@@ -1497,7 +1500,7 @@ _EOC_
             }
         }
 
-        for my $key (qw(cookie http ipdatx otp memcached-shdict shdict-simple ini upstream dns memcached redis mysql string upload websocket
+        for my $key (qw(cookie http ipdatx ipdb otp memcached-shdict shdict-simple ini upstream dns memcached redis mysql string upload websocket
                         lock lrucache core upstream_healthcheck limit_traffic memcached_server jit_uuid errlog_dedup block_req request_id
                         shell))
         {
@@ -1726,6 +1729,7 @@ _EOC_
   --without-lua_resty_scrypt         disable the lua-resty-scrypt library
   --without-lua_resty_lmdb           disable the lua-resty-lmdb library
   --without-lua_resty_ipdatx         disable the lua-resty-ipdatx library
+  --without-lua_resty_ipdb           disable the lua-resty-ipdb library  
   --without-lua_resty_otp            disable the lua-resty-otp library
   --without-lua_resty_dns            disable the lua-resty-dns library
   --without-lua_resty_memcached      disable the lua-resty-memcached library
