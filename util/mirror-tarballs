@@ -1306,7 +1306,7 @@ mv orinc-lmdb-* liblmdb-$ver || exit 1
 
 #################################
 
-ver=0.9.27.3
+ver=0.9.27.4
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/tcc-plus/tarball/v$ver" -O "tcc-plus-$ver.tar.gz" || exit 1
 tar -xzf tcc-plus-$ver.tar.gz || exit 1
 mv orinc-tcc-plus-* tcc-plus-$ver || exit 1
