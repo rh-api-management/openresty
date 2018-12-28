@@ -145,6 +145,8 @@ push @ngx_opts, "--with-stream";
 # by the user's own --with-cc-opt=OPTS option):
 push @ngx_cc_opts, "-O2";
 
+my $tcc_libpaths;
+
 for my $opt (@ARGV) {
     next unless defined $opt;
 
@@ -166,6 +168,11 @@ for my $opt (@ARGV) {
 
     if ($opt =~ /^--with-make=(.*)/) {
         $resty_opts{make} = $1;
+        next;
+    }
+
+    if ($opt =~ /^--tcc-libpaths=(.*)/) {
+        $tcc_libpaths = $1;
         next;
     }
 
@@ -1122,6 +1129,10 @@ int main(void) {
         cd $tcc_src;
 
         my $extra_opts = "--disable-static --with-selinux";
+
+        if ($tcc_libpaths) {
+            $extra_opts .= " --libpaths=$tcc_libpaths";
+        }
 
         if (@user_cc_opts) {
             my $cc_opts = join ' ', @user_cc_opts;
