@@ -1334,6 +1334,15 @@ mv orinc-lua-resty-triegen-* lua-resty-triegen-$ver || exit 1
 
 #################################
 
+ver=0.03
+$root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-hyperscan/tarball/v$ver" -O "lua-resty-hyperscan-$ver.tar.gz" || exit 1
+tar -xzf lua-resty-hyperscan-$ver.tar.gz || exit 1
+if [ ! -d "lua-resty-hyperscan-$ver" ]; then
+    mv orinc-lua-resty-hyperscan-* lua-resty-hyperscan-$ver || exit 1
+fi
+
+#################################
+
 downlod_priv_tar lua-resty-sysstat 0.02rc4
 downlod_priv_tar lua-resty-fs 0.02rc2
 

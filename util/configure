@@ -275,6 +275,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_triegen') {
         $resty_opts{no_lua_resty_triegen} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_hyperscan') {
+        $resty_opts{no_lua_resty_hyperscan} = 1;
+
     } elsif ($opt eq '--without-lua_resty_pgutils') {
         $resty_opts{no_lua_resty_pgutils} = 1;
 
@@ -1412,7 +1415,10 @@ _EOC_
                 "\$(MAKE) install$extra_opts";
         }
 
-        for my $tag (qw/json-escape balancer ssl zlib scrypt edge-pki pgutils logger-socket sysstat fs domain-suffix signal triegen/) {
+        for my $tag (qw/json-escape balancer ssl zlib scrypt edge-pki pgutils
+                        logger-socket sysstat fs domain-suffix signal triegen
+                        hyperscan/)
+        {
             my $no_flag = "no_lua_resty_$tag";
             my $pkg_prefix = "lua-resty-$tag";
             if ($tag eq 'edge-pki') {
@@ -1454,6 +1460,10 @@ _EOC_
                 if ($tag eq 'triegen') {
                     my $tcc_dir = auto_complete "tcc-plus";
                     $extra_cflags .= " -I$root_dir/build/$tcc_dir";
+                }
+
+                if ($tag eq 'hyperscan') {
+                    $extra_cflags .= " -I$prefix/hyperscan/include/hs";
                 }
 
                 if ($on_solaris) {
@@ -1764,6 +1774,7 @@ _EOC_
   --without-lua_captcha              disable the lua-captcha library
   --without-lua_resty_domain_suffix  disable the lua-resty-domain-suffix library
   --without-lua_resty_triegen        disable the lua-resty-triegen library
+  --without-lua_resty_hyperscan      disable the lua-resty-hyperscan library
 
   --with-luajit                      enable and build the bundled LuaJIT 2.1 (the default)
   --with-luajit=DIR                  use the external LuaJIT 2.1 installation specified by DIR
