@@ -1420,6 +1420,7 @@ find bundle -name '*.md' -delete
 find bundle -name '*.markdown' -delete
 find bundle -name '*.wiki' -delete
 find bundle -name '*~' -delete
+find bundle -name '.travis.yml' -delete
 
 cd $root || exit 1
 
