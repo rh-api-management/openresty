@@ -961,7 +961,7 @@ mv orinc-lua-resty-logger-socket-* lua-resty-logger-socket-$ver || exit 1
 
 #################################
 
-downlod_priv_tar lua-resty-domain-suffix 0.01rc4
+downlod_priv_tar lua-resty-domain-suffix 0.01rc8
 
 #################################
 
