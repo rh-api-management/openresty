@@ -1041,7 +1041,7 @@ cd ..
 
 #################################
 
-ver=0.01rc3
+ver=0.01rc4
 $root/util/get-tarball "https://github.com/openresty/lua-resty-memcached-shdict/tarball/v$ver" -O "lua-resty-memcached-shdict-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-memcached-shdict-$ver.tar.gz || exit 1
 mv openresty-lua-resty-memcached-shdict-* lua-resty-memcached-shdict-$ver || exit 1
@@ -1053,7 +1053,7 @@ cd ..
 
 #################################
 
-ver=0.01rc3
+ver=0.01rc5
 $root/util/get-tarball "https://github.com/openresty/lua-resty-shdict-simple/tarball/v$ver" -O "lua-resty-shdict-simple-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-shdict-simple-$ver.tar.gz || exit 1
 mv openresty-lua-resty-shdict-simple-* lua-resty-shdict-simple-$ver || exit 1
