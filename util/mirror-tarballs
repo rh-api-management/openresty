@@ -1018,11 +1018,9 @@ cd ..
 #################################
 
 ver=0.10
-$root/util/get-tarball "https://github.com/pintsized/lua-resty-http/tarball/v$ver" -O "lua-resty-http-$ver.tar.gz" || exit 1
+$root/util/get-tarball "https://github.com/ledgetech/lua-resty-http/tarball/v$ver" -O "lua-resty-http-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-http-$ver.tar.gz || exit 1
-#mv pintsized-lua-resty-http-* lua-resty-http-$ver || exit 1
-tarball_name=$(tar tzf lua-resty-http-$ver.tar.gz | head -1 | cut -f1 -d "/")
-mv $tarball_name lua-resty-http-$ver || exit 1
+mv $(tar tzf lua-resty-http-$ver.tar.gz | head -1 | cut -f1 -d "/") lua-resty-http-$ver || exit 1
 cd lua-resty-http-$ver || exit 1
 #patch -p1 < $root/patches/lua_cjson-$ver-array_detection_fix.patch || exit 1
 sed 's/\$(DESTDIR)\//$(DESTDIR)/g' Makefile > mk || exit 1
