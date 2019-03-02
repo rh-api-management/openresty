@@ -923,7 +923,7 @@ cd ..
 
 #################################
 
-ver=0.01rc2
+ver=0.01rc3
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-ipdb/tarball/v$ver" -O "lua-resty-ipdb-$ver.tar.gz" || exit 1
 tar -xzf lua-resty-ipdb-$ver.tar.gz || exit 1
 mv orinc-lua-resty-ipdb-* lua-resty-ipdb-$ver || exit 1
