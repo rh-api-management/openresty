@@ -218,6 +218,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_json_escape') {
         $resty_opts{no_lua_resty_json_escape} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_utf8_escape') {
+        $resty_opts{no_lua_resty_utf8_escape} = 1;
+
     } elsif ($opt eq '--without-lua_resty_upstream') {
         $resty_opts{no_lua_resty_upstream} = 1;
 
@@ -1421,7 +1424,7 @@ _EOC_
 
         for my $tag (qw/json-escape balancer ssl zlib scrypt edge-pki pgutils
                         logger-socket sysstat fs domain-suffix signal triegen
-                        hyperscan/)
+                        hyperscan utf8-escape/)
         {
             my $no_flag = "no_lua_resty_$tag";
             my $pkg_prefix = "lua-resty-$tag";
@@ -1738,6 +1741,7 @@ _EOC_
   --without-lua_resty_ini            disable the lua-resty-ini library
   --without-lua_resty_balancer       disable the lua-resty-balancer library
   --without-lua_resty_json_escape    disable the lua-resty-json-escape library
+  --without-lua_resty_utf8_escape    disable the lua-resty-utf8-escape library
   --without-lua_resty_upstream       disable the lua-resty-upstream library
   --without-edge_message_bus         disable the edge-message-bus Lua library
   --without-edge_routing_platform    disable the edge-routing-platform Lua library
