@@ -1362,8 +1362,8 @@ cd ..
 
 #################################
 
-downlod_priv_tar lua-resty-sysstat 0.02rc4
-downlod_priv_tar lua-resty-fs 0.02rc2
+downlod_priv_tar lua-resty-sysstat 1.0.0
+downlod_priv_tar lua-resty-fs 1.0.0
 
 #################################
 
