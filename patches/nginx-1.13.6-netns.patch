@@ -933,7 +933,18 @@ diff --git a/src/http/ngx_http.c b/src/http/ngx_http.c
 diff --git a/src/http/ngx_http_core_module.c b/src/http/ngx_http_core_module.c
 --- a/src/http/ngx_http_core_module.c
 +++ b/src/http/ngx_http_core_module.c
-@@ -3762,6 +3762,10 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+@@ -2798,6 +2798,10 @@ ngx_http_core_server(ngx_conf_t *cf, ngx_command_t *cmd, void *dummy)
+ #endif
+         lsopt.wildcard = 1;
+ 
++#if (NGX_HAVE_NET_NS)
++        lsopt.netns_name = NGX_DEFAULT_NETNS_NAME;
++#endif
++
+         (void) ngx_sock_ntop(&lsopt.sockaddr.sockaddr, lsopt.socklen,
+                              lsopt.addr, NGX_SOCKADDR_STRLEN, 1);
+ 
+@@ -3762,6 +3766,10 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
      lsopt.ipv6only = 1;
  #endif
  
@@ -944,7 +955,7 @@ diff --git a/src/http/ngx_http_core_module.c b/src/http/ngx_http_core_module.c
      (void) ngx_sock_ntop(&lsopt.sockaddr.sockaddr, lsopt.socklen, lsopt.addr,
                           NGX_SOCKADDR_STRLEN, 1);
  
-@@ -4067,6 +4071,39 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+@@ -4067,6 +4075,39 @@ ngx_http_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
              continue;
          }
  
