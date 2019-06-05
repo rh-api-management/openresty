@@ -1487,7 +1487,7 @@ _EOC_
 
         for my $tag (qw/json-escape balancer ssl zlib scrypt edge-pki pgutils
                         logger-socket sysstat fs domain-suffix signal triegen
-                        hyperscan utf8-escape charset/)
+                        hyperscan utf8-escape charset ipdb/)
         {
             my $no_flag = "no_lua_resty_$tag";
             my $pkg_prefix = "lua-resty-$tag";
@@ -1591,7 +1591,7 @@ _EOC_
             }
         }
 
-        for my $key (qw(cookie http ipdatx ipdb otp memcached-shdict shdict-simple ini upstream dns memcached redis mysql string upload websocket
+        for my $key (qw(cookie http ipdatx otp memcached-shdict shdict-simple ini upstream dns memcached redis mysql string upload websocket
                         lock lrucache core upstream_healthcheck limit_traffic memcached_server jit_uuid errlog_dedup block_req request_id
                         shell))
         {
