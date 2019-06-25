@@ -229,6 +229,9 @@ for my $opt (@ARGV) {
     } elsif ($opt eq '--without-lua_resty_utf8_escape') {
         $resty_opts{no_lua_resty_utf8_escape} = 1;
 
+    } elsif ($opt eq '--without-lua_resty_time') {
+        $resty_opts{no_lua_resty_time} = 1;
+
     } elsif ($opt eq '--without-lua_resty_charset') {
         $resty_opts{no_lua_resty_charset} = 1;
 
@@ -1487,7 +1490,7 @@ _EOC_
 
         for my $tag (qw/json-escape balancer ssl zlib scrypt edge-pki pgutils
                         logger-socket sysstat fs domain-suffix signal triegen
-                        hyperscan utf8-escape charset ipdb/)
+                        hyperscan utf8-escape charset ipdb time/)
         {
             my $no_flag = "no_lua_resty_$tag";
             my $pkg_prefix = "lua-resty-$tag";
