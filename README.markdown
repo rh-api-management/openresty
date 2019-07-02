@@ -12,6 +12,7 @@ Table of Contents
     * [For Bundle Maintainers](#for-bundle-maintainers)
 * [Additional Features](#additional-features)
     * [resolv.conf parsing](#resolvconf-parsing)
+* [Publish a new release](#publish-a-new-release)
 * [Mailing List](#mailing-list)
 * [Report Bugs](#report-bugs)
 * [Copyright & License](#copyright--license)
@@ -73,7 +74,7 @@ In additional to the standard nginx core features, this bundle also supports the
 [Back to TOC](#table-of-contents)
 
 resolv.conf parsing
---------------------
+-------------------
 
 **syntax:** *resolver address ... [valid=time] [ipv6=on|off] [local=on|off|path]*
 
@@ -91,6 +92,15 @@ path to be used for parsing, for example: `local=/tmp/test.conf`.
 When `local=off`, parsing will be disabled (this is the default).
 
 This feature is not available on Windows platforms.
+
+[Back to TOC](#table-of-contents)
+
+Publish a new release
+=====================
+
+1. edit the `minor_ver` in `util/ver`.
+2. add a new tag.
+3. wait for the new packages, logs can be seen in https://openresty.org/download/pkg-or-plus-cron.log.
 
 [Back to TOC](#table-of-contents)
 
