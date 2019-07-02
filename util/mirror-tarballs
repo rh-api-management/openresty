@@ -563,7 +563,7 @@ mv orinc-lua-resty-scrypt-* lua-resty-scrypt-$ver || exit 1
 
 #################################
 
-ver=0.01rc2
+ver=0.02
 $root/util/get-priv-tarball "https://api.github.com/repos/orinc/lua-resty-zlib/tarball/v$ver" -O lua-resty-zlib-$ver.tar.gz || exit 1
 tar -xzf lua-resty-zlib-$ver.tar.gz || exit 1
 mv orinc-lua-resty-zlib-* lua-resty-zlib-$ver || exit 1
