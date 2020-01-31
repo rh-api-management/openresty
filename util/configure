@@ -941,7 +941,7 @@ _EOC_
             }
 
             my $extra_opts = " DESTDIR=\$(DESTDIR) LUA_INCLUDE_DIR=$lua_inc " .
-                "LUA_CMODULE_DIR=$lualib_prefix LUA_MODULE_DIR=$lualib_prefix";
+                "LUA_CMODULE_DIR=$lualib_prefix LUA_MODULE_DIR=$lualib_prefix \$(EXTRA_FLAGS)";
 
             if ($platform eq 'msys') {
                 my $luajit_root = File::Spec->rel2abs("luajit-root");
@@ -991,7 +991,7 @@ _EOC_
 
             my $extra_opts =
                 " DESTDIR=\$(DESTDIR) LUA_INCLUDE_DIR=$ENV{LUAJIT_INC} " .
-                "LUA_LIB_DIR=$lualib_prefix";
+                "LUA_LIB_DIR=$lualib_prefix \$(EXTRA_FLAGS)";
 
             if ($on_solaris) {
                 $extra_opts .= " INSTALL=$root_dir/build/install";
@@ -1039,7 +1039,7 @@ _EOC_
             }
 
             my $extra_opts = " DESTDIR=\$(DESTDIR) LUA_INCLUDE_DIR=$lua_inc " .
-                "LUA_LIB_DIR=$lualib_prefix";
+                "LUA_LIB_DIR=$lualib_prefix \$(EXTRA_FLAGS)";
 
             if ($platform eq 'msys') {
                 my $luajit_root = File::Spec->rel2abs("luajit-root");
