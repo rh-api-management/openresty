@@ -11,12 +11,50 @@ fi
 url=$1
 outfile=$3
 cachefile=$work/$outfile
+original_path=$(pwd)
+
+
 if [ -s $cachefile ]; then
+    echo "Found Cache file for $url: $cachefile"
     cp $work/$outfile $outfile || exit 1
-else
-    wget $1 -O $3 || exit 1
-    if [ $? == 0 ]; then
-        cp $3 $work/ || exit 1
-    fi
+    exit 0
 fi
 
+function get_target() {
+  local url=$1
+  local outfile=$2
+  echo $url
+  local target=$(echo $url | awk '{
+    gsub(/github.com/, "code.engineering.redhat.com/gerrit");
+    match($0, /(.+)\/tarball\/(.+)/,arr);
+    print arr[1] " " arr[2]; }');
+  local target_url=$(echo $target | awk '{print $1}')
+  local target_version=$(echo $target | awk '{print $2}')
+  local prefix=$(echo $target_url | awk '{
+    match($0, /(.+)\/gerrit\/(.+)/,arr);
+    print arr[2]; }' | sed "s/\//-/g");
+  echo "$target_url $target_version" >> $root/source-repos
+  local repo_name=$(echo $target_url | awk -F '/' '{print $NF}')
+  local cached_source_repo="$root/$repo_name-$target_version.tar.gz"
+  # local cached_source_repo="/tmp/$repo_name"
+  local tmpFolder=$(mktemp -u)
+
+  if [ -s $cached_source_repo ]; then
+    local target_tmp_folder=$tmpFolder/$prefix-$target_version/
+    mkdir -p $target_tmp_folder
+    cd $tmpFolder
+    tar -xvzf $cached_source_repo -C $target_tmp_folder --strip-component=1
+    ls -lah
+    tar -czvf $work/$outfile $prefix-$target_version
+  else
+    git clone -b $target_version $target_url $tmpFolder
+    cd $tmpFolder
+    git archive --format=tar.gz --prefix="$prefix-$target_version/" $target_version > $work/$outfile
+  fi
+
+
+  rm -rf $tmpFolder
+  cp $work/$outfile $original_path/$outfile
+}
+
+get_target $url $outfile
