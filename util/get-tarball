@@ -20,6 +20,7 @@ if [ -s $cachefile ]; then
     exit 0
 fi
 
+
 function get_target() {
   local url=$1
   local outfile=$2
@@ -47,6 +48,10 @@ function get_target() {
     ls -lah
     tar -czvf $work/$outfile $prefix-$target_version
   else
+    if [[ ! -z "$FORCE_CACHE" ]]; then
+        echo "FORCE CACHE is enabled, cannot get the cached filed from $cached_source_repo" 1>&2
+        exit 1
+    fi
     git clone -b $target_version $target_url $tmpFolder
     cd $tmpFolder
     git archive --format=tar.gz --prefix="$prefix-$target_version/" $target_version > $work/$outfile
