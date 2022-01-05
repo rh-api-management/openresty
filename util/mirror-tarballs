@@ -687,7 +687,7 @@ mv openresty-opm-* opm-$ver || exit 1
 #################################
 
 ver=2.1-20201027
-$root/util/get-tarball "https://github.com/openresty/luajit2/tarball/v$ver-product-1" -O "LuaJIT-$ver.tar.gz" || exit 1
+$root/util/get-tarball "https://github.com/openresty/luajit2/tarball/v$ver-product-zfixes" -O "LuaJIT-$ver.tar.gz" || exit 1
 tar -xzvf LuaJIT-$ver.tar.gz || exit 1
 mv openresty-luajit2-* LuaJIT-$ver || exit 1
 
