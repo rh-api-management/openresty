@@ -669,30 +669,10 @@ mv openresty-encrypted-session-nginx-module-* encrypted-session-nginx-module-$ve
 #mv ngx_http_upstream_keepalive-* upstream-keepalive-nginx-module-$ver || exit 1
 
 #################################
-
-ver=0.3.9
-$root/util/get-tarball "https://people.freebsd.org/~osa/ngx_http_redis-$ver.tar.gz" -O redis-nginx-module-$ver.tar.gz || exit 1
-tar -xzf redis-nginx-module-$ver.tar.gz || exit 1
-mv ngx_http_redis-* redis-nginx-module-$ver || exit 1
-
-cd redis-nginx-module-$ver
-echo "applying ngx_http_redis-$ver-variables_in_redis_pass.patch"
-patch -p1 < $root/patches/ngx_http_redis-$ver-variables_in_redis_pass.patch || exit 1
-
-echo
-echo "applying ngx_http_redis-$ver-default_port_fix.patch"
-patch -p1 < $root/patches/ngx_http_redis-$ver-default_port_fix.patch || exit 1
-echo
-
-answer=`$root/util/ver-ge "$main_ver" 1.23.0`
-if [ "$answer" = "Y" ]; then
-echo
-echo "applying ngx_http_redis-$ver-remove_content_encoding.patch"
-patch -p1 < $root/patches/ngx_http_redis-$ver-remove_content_encoding.patch || exit 1
-echo
-fi
-
-cd ..
+ver=0.4.0.1
+$root/util/get-tarball "https://github.com/openresty/ngx_http_redis/tarball/v$ver" -O ngx_http_redis-$ver.tar.gz || exit 1
+tar -xzf ngx_http_redis-$ver.tar.gz || exit 1
+mv openresty-ngx_http_redis-* ngx_http_redis-$ver || exit 1
 
 #################################
 
